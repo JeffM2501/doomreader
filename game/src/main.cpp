@@ -26,6 +26,8 @@ uint8_t* DataBuffer = nullptr;
 
 const WADData::DirectoryEntry* CurrentEntry = nullptr;
 
+RenderTexture SectorViewRT;
+
 
 void LoadLumpData(const WADData::DirectoryEntry* entry)
 {
@@ -66,7 +68,37 @@ void ClearLumpData()
 
 void DrawLevelLines()
 {
+	Camera2D cam = { 0 };
+	cam.zoom = 0.125f;
+	cam.offset = Vector2{ GetScreenWidth() * 0.5f, (float)GetScreenHeight() - 50 };
+
+	BeginTextureMode(SectorViewRT);
+	ClearBackground(BLANK);
+
+	BeginMode2D(cam);
+	DrawLine(-100, 0, 100, 0, RED);
+	DrawLine(0, -100, 0, 100, GREEN);
+
 	WADData::VertexesLump* verts = (WADData::VertexesLump*)LumpDB[WADData::VERTEXES];
+	WADData::LineDefLump* lines = (WADData::LineDefLump*)LumpDB[WADData::LINEDEFS];
+
+	for (const auto& line : lines->Contents)
+	{
+		auto& sp = verts->Contents[line.Start];
+		auto& ep = verts->Contents[line.End];
+
+		DrawLine(sp.X, sp.Y, ep.X, ep.Y, WHITE);
+	}
+
+	WADData::ThingsLump* things = (WADData::ThingsLump*)LumpDB[WADData::THINGS];
+	for (const auto& thing : things->Contents)
+	{
+		DrawCircle(thing.X, thing.Y, 10, YELLOW);
+	}
+	EndMode2D();
+
+	EndTextureMode();
+	DrawTexture(SectorViewRT.texture, 0, 0, WHITE);
 }
 
 int main ()
@@ -79,23 +111,28 @@ int main ()
 
 	ReadLevelWad();
 
-	Camera2D cam = { 0 };
-	cam.zoom = 1;
-	
+	SectorViewRT = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
+
 	// game loop
 	while (!WindowShouldClose())
 	{
+		if (IsWindowResized())
+		{
+			UnloadRenderTexture(SectorViewRT);
+			SectorViewRT = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
+		}
+
 		// drawing
 		BeginDrawing();
 		ClearBackground(BLACK);
 
-		cam.offset = Vector2Scale(Vector2{ (float)GetScreenWidth(), (float)GetScreenHeight() }, 0.5f);
+		
 
-		BeginMode2D(cam);
+		
 
 		DrawLevelLines();
 
-		EndMode2D();
+	
 
 		rlImGuiBegin();
 
@@ -125,7 +162,7 @@ int main ()
 			if (ImGui::Button("Load Lump"))
 				LoadLumpData(CurrentEntry);
 
-			auto itr = LumpDB.find(CurrentEntry);
+			auto itr = LumpDB.find(CurrentEntry->Name);
 			if (itr != LumpDB.end() && itr->second && itr->second->Visualize)
 			{
 				itr->second->Visualize(itr->second);

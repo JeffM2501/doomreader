@@ -70,25 +70,49 @@ namespace WADData
         std::vector<Vertex> Contents;
     };
 
+	static constexpr uint16_t InvalidSectorIndex = uint16_t(-1);
+	static constexpr uint16_t InvalidSideDefIndex = uint16_t(-1);
+
     class LineDefLump : public Lump
     {
     public:
         void Parse(uint8_t* data, size_t offset, size_t size) override;
 
+       
         struct LineDef
         {
             uint16_t Start = 0;
             uint16_t End = 0;
             uint16_t Flags = 0;
             uint16_t SpecialType = 0;
-            uint16_t Sector = 0;
-            uint16_t FrontSideDef = 0;
-            uint16_t BackSideDef = 0;
+            uint16_t Sector = InvalidSectorIndex;
+            uint16_t FrontSideDef = InvalidSideDefIndex;
+            uint16_t BackSideDef = InvalidSideDefIndex;
 
             static constexpr size_t ReadSize = 14;
         };
 
         std::vector<LineDef> Contents;
     };
+
+	class SideDefLump : public Lump
+	{
+	public:
+		void Parse(uint8_t* data, size_t offset, size_t size) override;
+
+		struct SideDef
+		{
+			int16_t XOffset = 0;
+			int16_t YOffset = 0;
+            const char TopTexture[8] = { 0 };
+            const char TopTexture[8] = { 0 };
+            const char TopTexture[8] = { 0 };
+			uint16_t SectorId = InvalidSectorIndex;
+
+			static constexpr size_t ReadSize = 30;
+		};
+
+		std::vector<SideDef> Contents;
+	};
 
 }

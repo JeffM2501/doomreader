@@ -10,6 +10,8 @@ namespace WADData
             return new VertexesLump();
         if (name == LINEDEFS)
             return new LineDefLump();
+		if (name == SIDEDEFS)
+			return new SideDefLump();
 
         return nullptr;
     }
@@ -50,4 +52,15 @@ namespace WADData
         }
     }
 
+	void SideDefLump::Parse(uint8_t* data, size_t offset, size_t size)
+	{
+		size_t count = size / SideDef::ReadSize;
+
+		Contents.resize(count);
+		for (size_t i = 0; i < count; i++)
+		{
+			memcpy(&Contents[i], data + offset, SideDef::ReadSize);
+			offset += SideDef::ReadSize;
+		}
+	}
 }
