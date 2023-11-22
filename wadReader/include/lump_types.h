@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <functional>
 
 namespace WADData
 {
@@ -18,6 +19,8 @@ namespace WADData
     {
     public:
         virtual void Parse(uint8_t* data, size_t offset, size_t size) = 0;
+
+        std::function<void(Lump*)> Visualize = nullptr;
     };
 
     static constexpr char THINGS[] = "THINGS";
@@ -67,6 +70,25 @@ namespace WADData
         std::vector<Vertex> Contents;
     };
 
+    class LineDefLump : public Lump
+    {
+    public:
+        void Parse(uint8_t* data, size_t offset, size_t size) override;
 
+        struct LineDef
+        {
+            uint16_t Start = 0;
+            uint16_t End = 0;
+            uint16_t Flags = 0;
+            uint16_t SpecialType = 0;
+            uint16_t Sector = 0;
+            uint16_t FrontSideDef = 0;
+            uint16_t BackSideDef = 0;
+
+            static constexpr size_t ReadSize = 14;
+        };
+
+        std::vector<LineDef> Contents;
+    };
 
 }

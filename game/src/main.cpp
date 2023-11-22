@@ -13,28 +13,23 @@ For a C++ project simply rename the file to .cpp and run premake
 #include <unordered_map>
 
 #include "raylib.h"
+#include "raymath.h"
 #include "reader.h"
 #include "rlImGui.h"
 #include "imgui.h"
+#include "lump_inspectors.h"
 
 std::vector<WADData::DirectoryEntry> Entries;
-std::unordered_map<const WADData::DirectoryEntry*, WADData::Lump*> LumpDB;
+std::unordered_map<std::string, WADData::Lump*> LumpDB;
 
 uint8_t* DataBuffer = nullptr;
 
 const WADData::DirectoryEntry* CurrentEntry = nullptr;
 
-void ReadLevelWad()
-{
-	int size = 0;
-	DataBuffer = LoadFileData("resources/E1M1.wad", &size);
-
-	Entries = WADReader::ReadDirectoryEntries(DataBuffer);
-}
 
 void LoadLumpData(const WADData::DirectoryEntry* entry)
 {
-	if (!entry|| LumpDB.find(entry) != LumpDB.end())
+	if (!entry|| LumpDB.find(entry->Name) != LumpDB.end())
 		return;
 
 	WADData::Lump* lump = WADData::GetLump(entry->Name);
@@ -42,7 +37,20 @@ void LoadLumpData(const WADData::DirectoryEntry* entry)
 		return;
 
 	lump->Parse(DataBuffer, entry->LumpOffset, entry->LumpSize);
-	LumpDB.insert_or_assign(entry, lump);
+	LumpDB.insert_or_assign(entry->Name, lump);
+
+	SetupLumpInspector(entry->Name, lump);
+}
+
+void ReadLevelWad()
+{
+    int size = 0;
+    DataBuffer = LoadFileData("resources/E1M1.wad", &size);
+
+    Entries = WADReader::ReadDirectoryEntries(DataBuffer);
+
+	for (auto& ent : Entries)
+		LoadLumpData(&ent);
 }
 
 void ClearLumpData()
@@ -56,14 +64,23 @@ void ClearLumpData()
 	LumpDB.clear();
 }
 
+void DrawLevelLines()
+{
+	WADData::VertexesLump* verts = (WADData::VertexesLump*)LumpDB[WADData::VERTEXES];
+}
+
 int main ()
 {
 	// set up the window
+	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	InitWindow(1280, 800, "Hello DOOM!");
 
 	rlImGuiSetup(true);
 
 	ReadLevelWad();
+
+	Camera2D cam = { 0 };
+	cam.zoom = 1;
 	
 	// game loop
 	while (!WindowShouldClose())
@@ -71,6 +88,14 @@ int main ()
 		// drawing
 		BeginDrawing();
 		ClearBackground(BLACK);
+
+		cam.offset = Vector2Scale(Vector2{ (float)GetScreenWidth(), (float)GetScreenHeight() }, 0.5f);
+
+		BeginMode2D(cam);
+
+		DrawLevelLines();
+
+		EndMode2D();
 
 		rlImGuiBegin();
 
@@ -101,11 +126,15 @@ int main ()
 				LoadLumpData(CurrentEntry);
 
 			auto itr = LumpDB.find(CurrentEntry);
+			if (itr != LumpDB.end() && itr->second && itr->second->Visualize)
+			{
+				itr->second->Visualize(itr->second);
+			}
 		}
 
 		ImGui::End();
 
-		ImGui::ShowDemoWindow();
+	//	ImGui::ShowDemoWindow();
 
 		rlImGuiEnd();
 		
