@@ -20,6 +20,8 @@ namespace WADData
     public:
         virtual void Parse(uint8_t* data, size_t offset, size_t size) = 0;
 
+        virtual ~Lump() = default;
+
         std::function<void(Lump*)> Visualize = nullptr;
     };
 
@@ -78,7 +80,6 @@ namespace WADData
     public:
         void Parse(uint8_t* data, size_t offset, size_t size) override;
 
-       
         struct LineDef
         {
             uint16_t Start = 0;
@@ -104,9 +105,9 @@ namespace WADData
 		{
 			int16_t XOffset = 0;
 			int16_t YOffset = 0;
-            const char TopTexture[8] = { 0 };
-            const char MidTexture[8] = { 0 };
-            const char LowerTexture[8] = { 0 };
+            std::string TopTexture;
+            std::string MidTexture;
+            std::string LowerTexture;
 			uint16_t SectorId = InvalidSectorIndex;
 
 			static constexpr size_t ReadSize = 30;
@@ -115,23 +116,24 @@ namespace WADData
 		std::vector<SideDef> Contents;
 	};
 
+	
     class SectorsLump : public Lump
     {
     public:
         void Parse(uint8_t* data, size_t offset, size_t size) override;
 
-        struct Sector
-        {
-            int16_t FloorHeight = 0;
-            int16_t CeilingHeight = 0;
-            const char FloorTexture[8] = { 0 };
-            const char CeilingTexture[8] = { 0 };
-            int16_t LightLevel = 0;
-            uint16_t SpecialType = 0;
-            uint16_t TagNumber = 0;
+		struct Sector
+		{
+			int16_t FloorHeight = 0;
+			int16_t CeilingHeight = 0;
+            std::string FloorTexture;
+            std::string CeilingTexture;
+			int16_t LightLevel = 0;
+			uint16_t SpecialType = 0;
+			uint16_t TagNumber = 0;
 
-            static constexpr size_t ReadSize = 26;
-        };
+			static constexpr size_t ReadSize = 26;
+		};
 
         std::vector<Sector> Contents;
     };

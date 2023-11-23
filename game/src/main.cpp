@@ -126,13 +126,7 @@ int main ()
 		BeginDrawing();
 		ClearBackground(BLACK);
 
-		
-
-		
-
 		DrawLevelLines();
-
-	
 
 		rlImGuiBegin();
 

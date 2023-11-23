@@ -59,7 +59,6 @@ void VisualizeLineDefs(WADData::LineDefLump* lineDefs)
     }
 }
 
-
 void VisualizeSideDefs(WADData::SideDefLump* sideDefs)
 {
     ImGui::TextUnformatted("Side Definitions");
@@ -68,7 +67,7 @@ void VisualizeSideDefs(WADData::SideDefLump* sideDefs)
         int count = 0;
         for (const auto& side : sideDefs->Contents)
         {
-            const char* text = TextFormat("SectorId %d##Side%d", side.SectorId, count);
+            const char* text = TextFormat("SectorId %d T %s M %s B %s ##Side%d", side.SectorId, side.TopTexture.c_str(), side.MidTexture.c_str(), side.LowerTexture.c_str(), count);
             if (ImGui::Selectable(text))
             {
             }
@@ -79,7 +78,24 @@ void VisualizeSideDefs(WADData::SideDefLump* sideDefs)
     }
 }
 
+void VisualizeSectors(WADData::SectorsLump* sectorDefs)
+{
+	ImGui::TextUnformatted("Side Definitions");
+	if (ImGui::BeginListBox("##SideDefs", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
+	{
+		int count = 0;
+		for (const auto& sector : sectorDefs->Contents)
+		{
+			const char* text = TextFormat("S %d, F %d C %d FT %s CT %s###Sector%d", count, sector.FloorHeight, sector.CeilingHeight, sector.FloorTexture.c_str(), sector.CeilingTexture.c_str(), count);
+			if (ImGui::Selectable(text))
+			{
+			}
+			count++;
+		}
 
+		ImGui::EndListBox();
+	}
+}
 
 void SetupLumpInspector(const std::string& name, WADData::Lump* lump)
 {
@@ -94,5 +110,7 @@ void SetupLumpInspector(const std::string& name, WADData::Lump* lump)
         lump->Visualize = [](WADData::Lump* lump) {VisualizeLineDefs((WADData::LineDefLump*)lump); };
     else if (name == WADData::SIDEDEFS)
         lump->Visualize = [](WADData::Lump* lump) {VisualizeSideDefs((WADData::SideDefLump*)lump); };
+	else if (name == WADData::SECTORS)
+		lump->Visualize = [](WADData::Lump* lump) {VisualizeSectors((WADData::SectorsLump*)lump); };
 }
 
