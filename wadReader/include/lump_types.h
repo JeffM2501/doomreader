@@ -115,7 +115,6 @@ namespace WADData
 
 		std::vector<SideDef> Contents;
 	};
-
 	
     class SectorsLump : public Lump
     {

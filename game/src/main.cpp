@@ -14,15 +14,22 @@ For a C++ project simply rename the file to .cpp and run premake
 
 #include "raylib.h"
 #include "raymath.h"
-#include "reader.h"
+
 #include "rlImGui.h"
 #include "imgui.h"
+
+
+#include "doom_map.h"
+#include "doom_map_render.h"
 #include "lump_inspectors.h"
+#include "reader.h"
 
 std::vector<WADData::DirectoryEntry> Entries;
 std::unordered_map<std::string, WADData::Lump*> LumpDB;
 
 uint8_t* DataBuffer = nullptr;
+
+DoomMap Map;
 
 const WADData::DirectoryEntry* CurrentEntry = nullptr;
 
@@ -53,6 +60,15 @@ void ReadLevelWad()
 
 	for (auto& ent : Entries)
 		LoadLumpData(&ent);
+
+	Map.Read("resources/E1M1.wad");
+
+	for (auto& [name, lump] : Map.LumpDB)
+	{
+		SetupLumpInspector(name, lump);
+	}
+
+	CacheMap(Map);
 }
 
 void ClearLumpData()
@@ -79,22 +95,7 @@ void DrawLevelLines()
 	DrawLine(-100, 0, 100, 0, RED);
 	DrawLine(0, -100, 0, 100, GREEN);
 
-	WADData::VertexesLump* verts = (WADData::VertexesLump*)LumpDB[WADData::VERTEXES];
-	WADData::LineDefLump* lines = (WADData::LineDefLump*)LumpDB[WADData::LINEDEFS];
-
-	for (const auto& line : lines->Contents)
-	{
-		auto& sp = verts->Contents[line.Start];
-		auto& ep = verts->Contents[line.End];
-
-		DrawLine(sp.X, sp.Y, ep.X, ep.Y, WHITE);
-	}
-
-	WADData::ThingsLump* things = (WADData::ThingsLump*)LumpDB[WADData::THINGS];
-	for (const auto& thing : things->Contents)
-	{
-		DrawCircle(thing.X, thing.Y, 10, YELLOW);
-	}
+	DoomRender::DrawMapLines(Map);
 	EndMode2D();
 
 	EndTextureMode();
@@ -134,7 +135,7 @@ int main ()
 		{
 			if (ImGui::BeginListBox("##Entries", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
 			{
-				for (const auto& entry : Entries)
+				for (const auto& entry : Map.Entries)
 				{
 					bool selected = CurrentEntry == &entry;
 
