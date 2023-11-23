@@ -7,6 +7,43 @@
 #include <vector>
 #include <unordered_map>
 
+#include "reader.h"
+
+class WADFile
+{
+public:
+
+    uint8_t* BufferData = nullptr;
+
+    std::vector<WADData::DirectoryEntry> Entries;
+
+    virtual ~WADFile()
+    {
+        if (BufferData)
+            UnloadFileData(BufferData);
+    }
+
+    inline virtual void Read(const char* fileName)
+    {
+        if (BufferData)
+            UnloadFileData(BufferData);
+
+        int size = 0;
+        BufferData = LoadFileData(fileName, &size);
+
+        Entries = WADReader::ReadDirectoryEntries(BufferData);
+    }
+
+	class LevelMap
+	{
+	public:
+		const std::string Name;
+		std::vector<WADData::DirectoryEntry> Entries;
+
+
+		uint8_t* BufferData;
+	};
+};
 
 class DoomMap 
 {

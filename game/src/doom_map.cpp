@@ -19,7 +19,7 @@ DoomMap::~DoomMap()
 void DoomMap::Read(const std::string& fileName)
 {
 	int size = 0;
-	BufferData = LoadFileData("resources/E1M1.wad", &size);
+	BufferData = LoadFileData(fileName.c_str(), &size);
 
 	Entries = WADReader::ReadDirectoryEntries(BufferData);
 
