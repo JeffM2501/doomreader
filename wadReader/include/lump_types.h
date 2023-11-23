@@ -23,16 +23,16 @@ namespace WADData
         std::function<void(Lump*)> Visualize = nullptr;
     };
 
-    static constexpr char THINGS[] = "THINGS";
-    static constexpr char LINEDEFS[] = "LINEDEFS";
-    static constexpr char SIDEDEFS[] = "SIDEDEFS";
-    static constexpr char VERTEXES[] = "VERTEXES";
-    static constexpr char SEGS[] = "SEGS";
-    static constexpr char SSECTORS[] = "SSECTORS";
-    static constexpr char NODES[] = "NODES";
-    static constexpr char SECTORS[] = "SECTORS";
-    static constexpr char REJECT[] = "REJECT";
-    static constexpr char BLOCKMAP[] = "BLOCKMAP";
+    static constexpr char THINGS[]      = "THINGS";
+    static constexpr char LINEDEFS[]    = "LINEDEFS";
+    static constexpr char SIDEDEFS[]    = "SIDEDEFS";
+    static constexpr char VERTEXES[]    = "VERTEXES";
+    static constexpr char SEGS[]        = "SEGS";
+    static constexpr char SSECTORS[]    = "SSECTORS";
+    static constexpr char NODES[]       = "NODES";
+    static constexpr char SECTORS[]     = "SECTORS";
+    static constexpr char REJECT[]      = "REJECT";
+    static constexpr char BLOCKMAP[]    = "BLOCKMAP";
 
     Lump* GetLump(const std::string& name);
 
@@ -105,8 +105,8 @@ namespace WADData
 			int16_t XOffset = 0;
 			int16_t YOffset = 0;
             const char TopTexture[8] = { 0 };
-            const char TopTexture[8] = { 0 };
-            const char TopTexture[8] = { 0 };
+            const char MidTexture[8] = { 0 };
+            const char LowerTexture[8] = { 0 };
 			uint16_t SectorId = InvalidSectorIndex;
 
 			static constexpr size_t ReadSize = 30;
@@ -115,4 +115,24 @@ namespace WADData
 		std::vector<SideDef> Contents;
 	};
 
+    class SectorsLump : public Lump
+    {
+    public:
+        void Parse(uint8_t* data, size_t offset, size_t size) override;
+
+        struct Sector
+        {
+            int16_t FloorHeight = 0;
+            int16_t CeilingHeight = 0;
+            const char FloorTexture[8] = { 0 };
+            const char CeilingTexture[8] = { 0 };
+            int16_t LightLevel = 0;
+            uint16_t SpecialType = 0;
+            uint16_t TagNumber = 0;
+
+            static constexpr size_t ReadSize = 26;
+        };
+
+        std::vector<Sector> Contents;
+    };
 }

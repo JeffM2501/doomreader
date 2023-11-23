@@ -5,12 +5,12 @@
 void VisualizeThings(WADData::ThingsLump* things)
 {
     ImGui::TextUnformatted("Things");
-    if (ImGui::BeginListBox("##Things", ImVec2(-FLT_MIN, 30 * ImGui::GetTextLineHeightWithSpacing())))
+    if (ImGui::BeginListBox("##Things", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
     {
         int count = 0;
         for (const auto& thing : things->Contents)
         {
-            const char* text = TextFormat(" T %d X %d Y %d###Thing%d", thing.TypeId, thing.X, thing.Y, count);
+            const char* text = TextFormat("T %d X %d Y %d###Thing%d", thing.TypeId, thing.X, thing.Y, count);
             if (ImGui::Selectable(text))
             {
             }
@@ -24,12 +24,12 @@ void VisualizeThings(WADData::ThingsLump* things)
 void VisualizeVertexes(WADData::VertexesLump* vertecies)
 {
     ImGui::TextUnformatted("Vertexes");
-    if (ImGui::BeginListBox("##Vertexes", ImVec2(-FLT_MIN, 30 * ImGui::GetTextLineHeightWithSpacing())))
+    if (ImGui::BeginListBox("##Vertexes", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
     {
         int count = 0;
         for (const auto& vertex : vertecies->Contents)
         {
-            const char* text = TextFormat(" X %d Y %d###Vertex%d", vertex.X, vertex.Y, count);
+            const char* text = TextFormat("X %d Y %d###Vertex%d", vertex.X, vertex.Y, count);
             if (ImGui::Selectable(text))
             {
             }
@@ -43,12 +43,12 @@ void VisualizeVertexes(WADData::VertexesLump* vertecies)
 void VisualizeLineDefs(WADData::LineDefLump* lineDefs)
 {
     ImGui::TextUnformatted("Line Definitions");
-    if (ImGui::BeginListBox("##LineDefs", ImVec2(-FLT_MIN, 30 * ImGui::GetTextLineHeightWithSpacing())))
+    if (ImGui::BeginListBox("##LineDefs", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
     {
         int count = 0;
         for (const auto& line : lineDefs->Contents)
         {
-            const char* text = TextFormat(" X %d Y %d###LineDefs%d", line.Start, line.End, count);
+            const char* text = TextFormat("X %d Y %d###LineDefs%d", line.Start, line.End, count);
             if (ImGui::Selectable(text))
             {
             }
@@ -58,6 +58,27 @@ void VisualizeLineDefs(WADData::LineDefLump* lineDefs)
         ImGui::EndListBox();
     }
 }
+
+
+void VisualizeSideDefs(WADData::SideDefLump* sideDefs)
+{
+    ImGui::TextUnformatted("Side Definitions");
+    if (ImGui::BeginListBox("##SideDefs", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
+    {
+        int count = 0;
+        for (const auto& side : sideDefs->Contents)
+        {
+            const char* text = TextFormat("SectorId %d##Side%d", side.SectorId, count);
+            if (ImGui::Selectable(text))
+            {
+            }
+            count++;
+        }
+
+        ImGui::EndListBox();
+    }
+}
+
 
 
 void SetupLumpInspector(const std::string& name, WADData::Lump* lump)
@@ -71,5 +92,7 @@ void SetupLumpInspector(const std::string& name, WADData::Lump* lump)
         lump->Visualize = [](WADData::Lump* lump) {VisualizeVertexes((WADData::VertexesLump*)lump); };
     else if (name == WADData::LINEDEFS)
         lump->Visualize = [](WADData::Lump* lump) {VisualizeLineDefs((WADData::LineDefLump*)lump); };
+    else if (name == WADData::SIDEDEFS)
+        lump->Visualize = [](WADData::Lump* lump) {VisualizeSideDefs((WADData::SideDefLump*)lump); };
 }
 
