@@ -39,3 +39,11 @@ void DoomMap::LoadLumpData(const WADData::DirectoryEntry* entry)
 	lump->Parse(BufferData, entry->LumpOffset, entry->LumpSize);
 	LumpDB.insert_or_assign(entry->Name, lump);
 }
+
+void CacheMap(DoomMap& map)
+{
+	map.Verts = (WADData::VertexesLump*)map.LumpDB[WADData::VERTEXES];
+	map.Lines = (WADData::LineDefLump*)map.LumpDB[WADData::LINEDEFS];
+	map.Sectors = (WADData::SectorsLump*)map.LumpDB[WADData::SECTORS];
+	map.Things = (WADData::ThingsLump*)map.LumpDB[WADData::THINGS];
+}
