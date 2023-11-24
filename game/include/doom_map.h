@@ -23,71 +23,59 @@ public:
             UnloadFileData(BufferData);
     }
 
-    inline virtual void Read(const char* fileName)
-    {
-        if (BufferData)
-            UnloadFileData(BufferData);
-
-        int size = 0;
-        BufferData = LoadFileData(fileName, &size);
-
-        Entries = WADReader::ReadDirectoryEntries(BufferData);
-    }
+	virtual void Read(const char* fileName);
 
 	class LevelMap
 	{
 	public:
-		const std::string Name;
+		std::string Name;
 		std::vector<WADData::DirectoryEntry> Entries;
+		std::unordered_map<std::string, WADData::Lump*> LumpDB;
 
+		WADData::VertexesLump* Verts = nullptr;
+		WADData::LineDefLump* Lines = nullptr;
+		WADData::ThingsLump* Things = nullptr;
+		WADData::SectorsLump* Sectors = nullptr;
 
-		uint8_t* BufferData;
-	};
-};
+		uint8_t* BufferData = nullptr;
 
-class DoomMap 
-{
-public:
-	~DoomMap();
-
-	void Read(const std::string& fileName);
-
-	std::vector<WADData::DirectoryEntry> Entries;
-	std::unordered_map<std::string, WADData::Lump*> LumpDB;
-
-	WADData::VertexesLump* Verts = nullptr;
-	WADData::LineDefLump* Lines = nullptr;
-	WADData::ThingsLump* Things = nullptr;
-	WADData::SectorsLump* Sectors = nullptr;
-
-	struct SectorInfo 
-	{
-		struct Edge
+		struct SectorInfo
 		{
-			// The line for this edge
-			uint16_t Line = 0;
+			struct Edge
+			{
+				// The line for this edge
+				uint16_t Line = 0;
 
-			// The side that we would draw if we are inside this sector
-			uint16_t Side = 0;
+				// The side that we would draw if we are inside this sector
+				uint16_t Side = 0;
 
-			// The sector on the other side of this line
-			uint16_t Destination = WADData::InvalidSideDefIndex;
+				// The sector on the other side of this line
+				uint16_t Destination = WADData::InvalidSideDefIndex;
+			};
+
+			// The sorted list of edges for this sector (forms a loop)
+			std::vector<Edge> Edges;
+
+			Color Tint = WHITE;
 		};
 
-		// The sorted list of edges for this sector (forms a loop)
-		std::vector<Edge> Edges;
+		std::vector<SectorInfo> SectorCache;
 
-		Color Tint = WHITE;
+		void Load();
+
+	protected:
+		void LoadLumpData(const WADData::DirectoryEntry& entry);
+
+		template<class T>
+		T* GetLump(const std::string& name)
+		{
+			auto itr = LumpDB.find(name);
+			if (itr == LumpDB.end())
+				return nullptr;
+
+			return (T*)(itr->second);
+		}
 	};
 
-	std::vector<SectorInfo> SectorCache;
-
-protected:
-	uint8_t* BufferData = nullptr;
-	size_t BufferSize = 0;
-
-
-	void LoadLumpData(const WADData::DirectoryEntry* entry);
+	std::vector<LevelMap> Levels;
 };
-
-void CacheMap(DoomMap& map);

@@ -20,7 +20,7 @@ Doom Level Reader Test
 #include "lump_inspectors.h"
 #include "reader.h"
 
-DoomMap Map;
+WADFile::LevelMap* Map;
 
 const WADData::DirectoryEntry* CurrentEntry = nullptr;
 
@@ -28,28 +28,13 @@ RenderTexture SectorViewRT;
 
 WADFile GameWad;
 
-
-
-void ReadLevelWad()
-{
-  	Map.Read("resources/E1M1.wad");
-
-	for (auto& [name, lump] : Map.LumpDB)
-	{
-		SetupLumpInspector(name, lump);
-	}
-
-	CacheMap(Map);
-}
-
 void ShowLevelInfoWindow()
 {
-
-    if (ImGui::Begin("Directory Entries"))
+    if (ImGui::Begin("Directory Entries") && Map)
     {
         if (ImGui::BeginListBox("##Entries", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
         {
-            for (const auto& entry : Map.Entries)
+            for (const auto& entry : Map->Entries)
             {
                 bool selected = CurrentEntry == &entry;
 
@@ -66,8 +51,8 @@ void ShowLevelInfoWindow()
             ImGui::Text("Lump Size = %d", int(CurrentEntry->LumpSize));
             ImGui::Text("Lump Offset = %d", int(CurrentEntry->LumpOffset));
 
-            auto itr = Map.LumpDB.find(CurrentEntry->Name);
-            if (itr != Map.LumpDB.end() && itr->second && itr->second->Visualize)
+            auto itr = Map->LumpDB.find(CurrentEntry->Name);
+            if (itr != Map->LumpDB.end() && itr->second && itr->second->Visualize)
             {
                 itr->second->Visualize(itr->second);
             }
@@ -78,10 +63,10 @@ void ShowLevelInfoWindow()
 
 void ShowGameInfoWindow()
 {
-
-    if (ImGui::Begin("Game WAD Entries"))
+    if (ImGui::Begin("Game WAD"))
     {
-        if (ImGui::BeginListBox("###GameEntries", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
+		ImGui::TextUnformatted("Lumps");
+        if (ImGui::BeginListBox("###GameEntries", ImVec2(-FLT_MIN, 5 * ImGui::GetTextLineHeightWithSpacing())))
         {
             for (const auto& entry : GameWad.Entries)
             {
@@ -89,11 +74,30 @@ void ShowGameInfoWindow()
 
                 if (ImGui::Selectable(entry.Name.c_str(), selected))
                 {
+
                 }
             }
 
             ImGui::EndListBox();
         }
+		ImGui::TextUnformatted("Maps");
+		if (ImGui::BeginListBox("###Maps", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
+		{
+			for (auto& level : GameWad.Levels)
+			{
+				bool selected = &level == Map;
+
+				if (ImGui::Selectable(level.Name.c_str(), selected))
+				{
+					Map = &level;
+
+					if ( Map->LumpDB.size() == 0)
+						Map->Load();
+				}
+			}
+
+			ImGui::EndListBox();
+		}
     }
     ImGui::End();
 }
@@ -102,7 +106,7 @@ void DrawLevelLines()
 {
 	Camera2D cam = { 0 };
 	cam.zoom = 0.125f;
-	cam.offset = Vector2{ GetScreenWidth() * 0.5f, (float)GetScreenHeight() - 50 };
+	cam.offset = Vector2{ GetScreenWidth() * 0.5f, (float)GetScreenHeight() * 0.5f };
 
 	BeginTextureMode(SectorViewRT);
 	ClearBackground(BLANK);
@@ -111,7 +115,8 @@ void DrawLevelLines()
 	DrawLine(-100, 0, 100, 0, RED);
 	DrawLine(0, -100, 0, 100, GREEN);
 
-	DoomRender::DrawMapLines(Map);
+	if (Map)
+		DoomRender::DrawMapLines(*Map);
 	EndMode2D();
 
 	EndTextureMode();
@@ -128,7 +133,11 @@ int main ()
 
 	GameWad.Read("resources/DOOM.wad");
 
-	ReadLevelWad();
+	if (GameWad.Levels.size() > 0)
+		Map = &(*GameWad.Levels.begin());
+
+	if (Map)
+		Map->Load();
 
 	SectorViewRT = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
 

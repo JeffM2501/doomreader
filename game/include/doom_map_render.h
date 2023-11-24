@@ -4,6 +4,6 @@
 
 namespace DoomRender
 {
-    void DrawMapLines(const DoomMap& map);
-    void DrawMapSectorPolygons(const DoomMap& map);
+    void DrawMapLines(const WADFile::LevelMap& map);
+    void DrawMapSectorPolygons(const WADFile::LevelMap& map);
 }
