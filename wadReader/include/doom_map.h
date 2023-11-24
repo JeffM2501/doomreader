@@ -36,6 +36,7 @@ public:
 		WADData::LineDefLump* Lines = nullptr;
 		WADData::ThingsLump* Things = nullptr;
 		WADData::SectorsLump* Sectors = nullptr;
+		WADData::SideDefLump* Sides = nullptr;
 
 		uint8_t* BufferData = nullptr;
 
@@ -45,6 +46,7 @@ public:
 			{
 				// The line for this edge
 				uint16_t Line = 0;
+				bool Reverse = false;
 
 				// The side that we would draw if we are inside this sector
 				uint16_t Side = 0;

@@ -14,7 +14,6 @@ Doom Level Reader Test
 #include "rlImGui.h"
 #include "imgui.h"
 
-
 #include "doom_map.h"
 #include "doom_map_render.h"
 #include "lump_inspectors.h"
@@ -28,11 +27,18 @@ RenderTexture SectorViewRT;
 
 WADFile GameWad;
 
+Camera2D MapViewCamera = { 0 };
+constexpr float DefaultZoom = 0.125f;
+
+size_t SelectedSector = 0;
+
 void ShowLevelInfoWindow()
 {
     if (ImGui::Begin("Directory Entries") && Map)
     {
-        if (ImGui::BeginListBox("##Entries", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
+		ImGui::TextUnformatted("Lumps");
+
+        if (ImGui::BeginListBox("##Entries", ImVec2(-FLT_MIN, 3 * ImGui::GetTextLineHeightWithSpacing())))
         {
             for (const auto& entry : Map->Entries)
             {
@@ -57,6 +63,23 @@ void ShowLevelInfoWindow()
                 itr->second->Visualize(itr->second);
             }
         }
+
+		ImGui::TextUnformatted("Sectors");
+		if (ImGui::BeginListBox("##Sectors", ImVec2(-FLT_MIN, 5 * ImGui::GetTextLineHeightWithSpacing())))
+		{
+			for (size_t i = 0; i < Map->SectorCache.size(); i++)
+			{
+				const char* text = TextFormat("%d", i + 1);
+
+				bool selected = SelectedSector == i;
+				if (ImGui::Selectable(text, selected))
+				{
+					SelectedSector = i;
+				}
+			}
+
+			ImGui::EndListBox();
+		}
     }
     ImGui::End();
 }
@@ -90,6 +113,7 @@ void ShowGameInfoWindow()
 				if (ImGui::Selectable(level.Name.c_str(), selected))
 				{
 					Map = &level;
+					SelectedSector = 0;
 
 					if ( Map->LumpDB.size() == 0)
 						Map->Load();
@@ -104,23 +128,49 @@ void ShowGameInfoWindow()
 
 void DrawLevelLines()
 {
-	Camera2D cam = { 0 };
-	cam.zoom = 0.125f;
-	cam.offset = Vector2{ GetScreenWidth() * 0.5f, (float)GetScreenHeight() * 0.5f };
+	MapViewCamera.offset = Vector2{ GetScreenWidth() * 0.5f, (float)GetScreenHeight() * 0.5f };
 
 	BeginTextureMode(SectorViewRT);
 	ClearBackground(BLANK);
 
-	BeginMode2D(cam);
-	DrawLine(-100, 0, 100, 0, RED);
-	DrawLine(0, -100, 0, 100, GREEN);
+	BeginMode2D(MapViewCamera);
+	DrawLine(-25, 0, 100, 0, RED);
+	DrawLine(0, -25, 0, 100, GREEN);
 
 	if (Map)
-		DoomRender::DrawMapLines(*Map);
+		DoomRender::DrawMapSectorPolygons(*Map, SelectedSector);
 	EndMode2D();
 
 	EndTextureMode();
 	DrawTexture(SectorViewRT.texture, 0, 0, WHITE);
+}
+
+void UpdateMapInput()
+{
+	float panSpeed = GetFrameTime() * 1000;
+	if (!ImGui::GetIO().WantCaptureKeyboard)
+	{
+		if (IsKeyDown(KEY_W))
+			MapViewCamera.target.y -= panSpeed;
+		if (IsKeyDown(KEY_S))
+			MapViewCamera.target.y += panSpeed;
+
+		if (IsKeyDown(KEY_D))
+			MapViewCamera.target.x -= panSpeed;
+		if (IsKeyDown(KEY_A))
+			MapViewCamera.target.x += panSpeed;
+	}
+
+	if (!ImGui::GetIO().WantCaptureMouse)
+	{
+		float mouseScale = 1.0f / MapViewCamera.zoom;
+		if (IsMouseButtonDown(MOUSE_RIGHT_BUTTON))
+			MapViewCamera.target = Vector2Add(MapViewCamera.target, Vector2{ GetMouseDelta().x * -mouseScale, GetMouseDelta().y * mouseScale });
+
+		MapViewCamera.zoom += GetMouseWheelMove() * 0.0625f;
+		if (MapViewCamera.zoom < DefaultZoom)
+			MapViewCamera.zoom = DefaultZoom;
+	}
 }
 
 int main ()
@@ -130,6 +180,8 @@ int main ()
 	InitWindow(1280, 800, "Hello DOOM!");
 
 	rlImGuiSetup(true);
+
+	MapViewCamera.zoom = DefaultZoom;
 
 	GameWad.Read("resources/DOOM.wad");
 
@@ -150,6 +202,8 @@ int main ()
 			SectorViewRT = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
 		}
 
+		UpdateMapInput();
+		
 		// drawing
 		BeginDrawing();
 		ClearBackground(BLACK);

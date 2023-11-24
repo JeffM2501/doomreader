@@ -89,6 +89,50 @@ void WADFile::LevelMap::Load()
 	Lines = GetLump<WADData::LineDefLump>(WADData::LINEDEFS);
 	Things = GetLump<WADData::ThingsLump>(WADData::THINGS);
 	Sectors = GetLump<WADData::SectorsLump>(WADData::SECTORS);
+	Sides = GetLump<WADData::SideDefLump>(WADData::SIDEDEFS);
+
+	SectorCache.resize(Sectors->Contents.size());
+
+	for (auto& sector : SectorCache)
+		sector.Tint = Color{ (uint8_t)GetRandomValue(128,255), (uint8_t)GetRandomValue(128,255) , (uint8_t)GetRandomValue(128,255) , 255 };
+
+	// cache the edges in a sector
+	for (size_t lineIndex = 0; lineIndex < Lines->Contents.size(); lineIndex++)
+	{
+		auto& line = Lines->Contents[lineIndex];
+
+		if (line.FrontSideDef != WADData::InvalidSideDefIndex)
+		{
+			auto& side = Sides->Contents[line.FrontSideDef];
+			auto& sector = Sectors->Contents[side.SectorId];
+
+			SectorInfo::Edge edge;
+			edge.Line = lineIndex;
+			edge.Reverse = false;
+
+			edge.Side = line.FrontSideDef;
+			edge.Destination = line.BackSideDef;
+
+			SectorCache[side.SectorId].Edges.push_back(edge);
+		}
+
+		if (line.BackSideDef != WADData::InvalidSideDefIndex)
+		{
+			auto& side = Sides->Contents[line.FrontSideDef];
+			auto& sector = Sectors->Contents[side.SectorId];
+
+			SectorInfo::Edge edge;
+			edge.Line = lineIndex;
+			edge.Reverse = true;
+
+			edge.Side = line.BackSideDef;
+			edge.Destination = line.FrontSideDef;
+
+			SectorCache[side.SectorId].Edges.push_back(edge);
+		}
+	}
+
+
 }
 
 void WADFile::LevelMap::LoadLumpData(const WADData::DirectoryEntry& entry)
