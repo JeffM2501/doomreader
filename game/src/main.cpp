@@ -31,6 +31,13 @@ Camera2D MapViewCamera = { 0 };
 constexpr float DefaultZoom = 0.125f;
 
 size_t SelectedSector = 0;
+size_t SelectedSubsector = 0;
+
+
+void AddChildNodes(size_t nodeId)
+{
+
+}
 
 void ShowLevelInfoWindow()
 {
@@ -42,11 +49,11 @@ void ShowLevelInfoWindow()
         {
             for (const auto& entry : Map->Entries)
             {
-                bool selected = CurrentEntry == &entry;
+                bool selected = CurrentEntry == &entry.second;
 
-                if (ImGui::Selectable(entry.Name.c_str(), selected))
+                if (ImGui::Selectable(entry.first.c_str(), selected))
                 {
-                    CurrentEntry = &entry;
+                    CurrentEntry = &entry.second;
                 }
             }
 
@@ -75,6 +82,40 @@ void ShowLevelInfoWindow()
 				if (ImGui::Selectable(text, selected))
 				{
 					SelectedSector = i;
+				}
+			}
+
+			ImGui::EndListBox();
+		}
+
+		ImGui::TextUnformatted("SubSectors");
+		if (ImGui::BeginListBox("##SubSectors", ImVec2(-FLT_MIN, 5 * ImGui::GetTextLineHeightWithSpacing())))
+		{
+			for (size_t i = 0; i < Map->SectorCache[SelectedSector].SubSectors.size(); i++)
+			{
+				const char* text = TextFormat("%d", i + 1);
+
+				bool selected = SelectedSubsector == i;
+				if (ImGui::Selectable(text, selected))
+				{
+					SelectedSubsector = i;
+				}
+			}
+
+			ImGui::EndListBox();
+		}
+
+		ImGui::TextUnformatted("Nodes");
+		if (ImGui::BeginListBox("##Nodes", ImVec2(-FLT_MIN, 20 * ImGui::GetTextLineHeightWithSpacing())))
+		{
+			for (size_t i = 0; i < Map->SectorCache[SelectedSector].SubSectors.size(); i++)
+			{
+				const char* text = TextFormat("%d", i + 1);
+
+				bool selected = SelectedSubsector == i;
+				if (ImGui::Selectable(text, selected))
+				{
+					SelectedSubsector = i;
 				}
 			}
 
@@ -137,8 +178,14 @@ void DrawLevelLines()
 	DrawLine(-25, 0, 100, 0, RED);
 	DrawLine(0, -25, 0, 100, GREEN);
 
+// 	if (Map)
+// 		DoomRender::DrawMapSectorPolygons(*Map, SelectedSector);
+ //	if (Map)
+ //		DoomRender::DrawMapSegs(*Map, SelectedSector, SelectedSubsector);
+
 	if (Map)
-		DoomRender::DrawMapSectorPolygons(*Map, SelectedSector);
+		DoomRender::DrawMapNodes(*Map, SelectedSector, SelectedSubsector);
+
 	EndMode2D();
 
 	EndTextureMode();
@@ -183,7 +230,7 @@ int main ()
 
 	MapViewCamera.zoom = DefaultZoom;
 
-	GameWad.Read("resources/DOOM.wad");
+	GameWad.Read("resources/glDOOMWAD.wad");
 
 	if (GameWad.Levels.size() > 0)
 		Map = &(*GameWad.Levels.begin());

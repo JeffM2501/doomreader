@@ -9,9 +9,23 @@ namespace WADReader
         return value;
     }
 
+	uint32_t ReadUInt(uint8_t* buffer, size_t& offset)
+	{
+        uint32_t value = *(uint32_t*)(buffer + offset);
+		offset += 4;
+		return value;
+	}
+
 	int16_t ReadInt16(uint8_t* buffer, size_t& offset)
 	{
         int16_t value = *(int16_t*)(buffer + offset);
+		offset += 2;
+		return value;
+	}
+
+	uint16_t ReadUInt16(uint8_t* buffer, size_t& offset)
+	{
+        uint16_t value = *(uint16_t*)(buffer + offset);
 		offset += 2;
 		return value;
 	}

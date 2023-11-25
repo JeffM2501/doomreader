@@ -25,6 +25,20 @@ bool IsMapLump(const std::string& name)
 	if (name == WADData::BLOCKMAP)
 		return true;
 
+	if (name == WADData::GL_VERT)
+		return true;
+	if (name == WADData::GL_SEGS)
+		return true;
+	if (name == WADData::GL_SSECT)
+		return true;
+	if (name == WADData::GL_NODES)
+		return true;
+	if (name == WADData::GL_PVS)
+		return true;
+
+	if (name.substr(0, 3) == "GL_")
+		return true;
+
 	return false;
 }
 
@@ -65,7 +79,7 @@ void WADFile::Read(const char* fileName)
 			{
 				if (IsMapLump(entry.Name))
 				{
-					map.Entries.push_back(entry);
+					map.Entries[entry.Name] = entry;
 				}
 				else
 				{
@@ -80,9 +94,40 @@ void WADFile::Read(const char* fileName)
 	}
 }
 
+void WADFile::LevelMap::FindLeafs(size_t nodeId)
+{
+	const auto& node = Nodes->Contents[nodeId];
+
+	if (node.RightChild & (1 << 15))
+	{
+		// it's a leaf
+
+		uint16_t subsector = node.RightChild & ~(1 << 15);
+		LeafNodes.insert(subsector);
+	}
+	else
+	{
+		FindLeafs(node.RightChild);
+	}
+
+	if (node.LeftChild & (1 << 15))
+	{
+		// it's a leaf
+		uint16_t subsector = node.RightChild & ~(1 << 15);
+		LeafNodes.insert(subsector);
+	}
+	else
+	{
+		FindLeafs(node.LeftChild);
+	}
+}
+
 void WADFile::LevelMap::Load()
 {
-	for (auto& entity : Entries)
+	// we need to load this first since other parsers may read it's version number
+	LoadLumpData(Entries[WADData::GL_VERT]);
+
+	for (auto& [key,entity] : Entries)
 		LoadLumpData(entity);
 
 	Verts = GetLump<WADData::VertexesLump>(WADData::VERTEXES);
@@ -90,6 +135,12 @@ void WADFile::LevelMap::Load()
 	Things = GetLump<WADData::ThingsLump>(WADData::THINGS);
 	Sectors = GetLump<WADData::SectorsLump>(WADData::SECTORS);
 	Sides = GetLump<WADData::SideDefLump>(WADData::SIDEDEFS);
+	Segs = GetLump<WADData::SegsLump>(WADData::SEGS);
+	Subsectors = GetLump<WADData::SubSectorsLump>(WADData::SSECTORS);
+	Nodes = GetLump<WADData::NodesLump>(WADData::NODES);
+
+	GLVerts = GetLump<WADData::GLVertsLump>(WADData::GL_VERT);
+	GLSegs = GetLump<WADData::GLSegsLump>(WADData::GL_SEGS);
 
 	SectorCache.resize(Sectors->Contents.size());
 
@@ -132,7 +183,22 @@ void WADFile::LevelMap::Load()
 		}
 	}
 
+	for (size_t subSectorId = 0; subSectorId < Subsectors->Contents.size(); subSectorId++)
+	{
+		auto& subsector = Subsectors->Contents[subSectorId];
+		auto& firstSeg = Segs->Contents[subsector.StartIndex];
+		auto& line = Lines->Contents[firstSeg.LineIndex];
 
+		size_t side = line.FrontSideDef;
+		if (firstSeg.Direction)
+			side = line.BackSideDef;
+
+		size_t sector = Sides->Contents[side].SectorId;
+
+		SectorCache[sector].SubSectors.push_back(subSectorId);
+	}
+
+	FindLeafs(Nodes->Contents.size()-1);
 }
 
 void WADFile::LevelMap::LoadLumpData(const WADData::DirectoryEntry& entry)
@@ -144,6 +210,11 @@ void WADFile::LevelMap::LoadLumpData(const WADData::DirectoryEntry& entry)
 	if (!lump)
 		return;
 
-	lump->Parse(BufferData, entry.LumpOffset, entry.LumpSize);
+	int version = 0;
+	auto glVertsLump = LumpDB.find(WADData::GL_VERT);
+	if (glVertsLump != LumpDB.end())
+		version = ((WADData::GLVertsLump*)glVertsLump->second)->FormatVersion;
+
+	lump->Parse(BufferData, entry.LumpOffset, entry.LumpSize, version);
 	LumpDB.insert_or_assign(entry.Name, lump);
 }

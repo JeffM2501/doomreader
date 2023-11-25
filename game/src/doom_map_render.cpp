@@ -1,6 +1,7 @@
 #include "doom_map_render.h"
 
 #include "raylib.h"
+#include "raymath.h"
 #include "rlgl.h"
 
 namespace DoomRender
@@ -71,6 +72,112 @@ namespace DoomRender
        
         rlSetLineWidth(1);
 
+        for (const auto& glVert : map.GLVerts->Contents)
+        {
+            DrawCircleV(Vector2{ glVert.X, glVert.Y }, 5, PINK);
+        }
+
         DrawThigs(map);
     }
+
+	void DrawMapSegs(const WADFile::LevelMap& map, size_t selectedSector, size_t selectedSubSector)
+	{
+        DrawMapSectorPolygons(map, selectedSector);
+
+        if (selectedSector < map.SectorCache.size())
+        {
+            const auto& sector = map.SectorCache[selectedSector];
+
+            
+            for (size_t i = 0; i < sector.SubSectors.size(); i++)
+            {
+                size_t subSectorIndex = sector.SubSectors[i];
+
+                const auto& subSector = map.Subsectors->Contents[subSectorIndex];
+
+                if (i != selectedSubSector)
+                    continue;
+
+                for (size_t index = subSector.StartIndex; index < subSector.StartIndex + subSector.Count; index++)
+                {
+                    const auto& segment = map.Segs->Contents[index];
+
+                    Vector2 sp = Vector2{ (float)map.Verts->Contents[segment.Start].X, (float)map.Verts->Contents[segment.Start].Y };
+					Vector2 ep = Vector2{ (float)map.Verts->Contents[segment.End].X, (float)map.Verts->Contents[segment.End].Y };
+
+                    Vector2 lineVec = Vector2Subtract(ep, sp);
+
+                    lineVec = Vector2Normalize(lineVec);
+
+                    Vector2 normalLine = Vector2Add(sp, Vector2Scale(lineVec, 10));
+
+                    DrawLineEx(sp, ep, 4, RED);
+
+                    Vector2 offsetSP = Vector2Add(sp, Vector2Scale(lineVec, segment.Offset));
+
+                    DrawLineEx(sp, offsetSP, 2, BLUE);
+
+                    DrawLineEx(sp, normalLine, 1, GREEN);
+
+                    // now show the lineindex
+
+                    const auto& refedLine = map.Lines->Contents[segment.LineIndex];
+
+					sp = Vector2{ (float)map.Verts->Contents[refedLine.Start].X, (float)map.Verts->Contents[refedLine.Start].Y };
+					ep = Vector2{ (float)map.Verts->Contents[refedLine.End].X, (float)map.Verts->Contents[refedLine.End].Y };
+
+                    DrawLineEx(sp, ep, 4, PURPLE);
+                }
+
+				break;
+            }
+		}
+	}
+
+    bool IsLeaf(uint16_t childId)
+    {
+        return childId & (1 << 15);
+    }
+
+    size_t GetSectorId(uint16_t childId)
+    {
+        return childId & ~(1 << 15);;
+    }
+
+    void DrawBBOX(int16_t bbox[4], Color color)
+    {
+        Rectangle rect = { float(bbox[2]), float(bbox[1]), float(bbox[3] - bbox[2]), float(bbox[0] - bbox[1]) };
+      //  DrawRectangleLinesEx(rect, 2, color);
+
+        DrawCircle(bbox[2], bbox[0], 10, PURPLE);
+        DrawCircle(bbox[3], bbox[1], 10, DARKPURPLE);
+    }
+
+    void DrawNode(const WADFile::LevelMap& map, size_t nodeID)
+    {
+        auto& node = map.Nodes->Contents[nodeID];
+
+        DrawBBOX(node.RightBBox, MAROON);
+        DrawBBOX(node.LeftBBox, SKYBLUE);
+
+        DrawLine(node.PartitionStartX, node.PartitionStartY, node.PartitionStartX + node.PartitionSlopeX, node.PartitionStartY + node.PartitionSlopeY, YELLOW);
+
+        if (!IsLeaf(node.RightChild))
+        {
+            DrawNode(map, node.RightChild);
+        }
+
+		if (!IsLeaf(node.LeftChild))
+		{
+			DrawNode(map, node.LeftChild);
+		}
+    }
+
+	void DrawMapNodes(const WADFile::LevelMap& map, size_t selectedSector, size_t selectedSubSector)
+	{
+        DrawMapSectorPolygons(map, selectedSector);
+
+      //  DrawNode(map, map.Nodes->Contents.size() - 1);
+	}
+
 }

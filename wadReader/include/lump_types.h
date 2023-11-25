@@ -10,15 +10,15 @@ namespace WADData
 
     struct DirectoryEntry
     {
-        size_t LumpOffset;
-        size_t LumpSize;
+        size_t LumpOffset = 0;
+        size_t LumpSize = 0;
         std::string Name;
     };
 
     class Lump
     {
     public:
-        virtual void Parse(uint8_t* data, size_t offset, size_t size) = 0;
+        virtual void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) = 0;
 
         virtual ~Lump() = default;
 
@@ -36,12 +36,18 @@ namespace WADData
     static constexpr char REJECT[]      = "REJECT";
     static constexpr char BLOCKMAP[]    = "BLOCKMAP";
 
+    static constexpr char GL_VERT[]     = "GL_VERT";
+    static constexpr char GL_SEGS[]     = "GL_SEGS";
+    static constexpr char GL_SSECT[]    = "GL_SSECT";
+    static constexpr char GL_NODES[]    = "GL_NODES";
+    static constexpr char GL_PVS[]      = "GL_PVS";
+
     Lump* GetLump(const std::string& name);
 
     class ThingsLump : public Lump
     {
     public:
-        void Parse(uint8_t* data, size_t offset, size_t size) override;
+        void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) override;
 
         struct Thing
         {
@@ -60,7 +66,7 @@ namespace WADData
     class VertexesLump : public Lump
     {
     public:
-        void Parse(uint8_t* data, size_t offset, size_t size) override;
+        void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) override;
 
         struct Vertex
         {
@@ -78,7 +84,7 @@ namespace WADData
     class LineDefLump : public Lump
     {
     public:
-        void Parse(uint8_t* data, size_t offset, size_t size) override;
+        void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) override;
 
         struct LineDef
         {
@@ -99,7 +105,7 @@ namespace WADData
 	class SideDefLump : public Lump
 	{
 	public:
-		void Parse(uint8_t* data, size_t offset, size_t size) override;
+		void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) override;
 
 		struct SideDef
 		{
@@ -119,7 +125,7 @@ namespace WADData
     class SectorsLump : public Lump
     {
     public:
-        void Parse(uint8_t* data, size_t offset, size_t size) override;
+        void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) override;
 
 		struct Sector
 		{
@@ -136,4 +142,118 @@ namespace WADData
 
         std::vector<Sector> Contents;
     };
+
+	class SegsLump : public Lump
+	{
+	public:
+		void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) override;
+
+		struct Seg
+		{
+			uint16_t Start = 0;
+			uint16_t End = 0;
+			int16_t Angle = 0;
+			uint16_t LineIndex = 0;
+			uint16_t Direction = 0;
+            int16_t Offset = 0;
+
+			static constexpr size_t ReadSize = 12;
+		};
+
+		std::vector<Seg> Contents;
+	};
+
+    class SubSectorsLump : public Lump
+	{
+	public:
+		void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) override;
+
+		struct SubSector
+		{
+			uint16_t Count = 0;
+			uint16_t StartIndex = 0;
+
+			static constexpr size_t ReadSize = 4;
+		};
+
+		std::vector<SubSector> Contents;
+    };
+
+	class NodesLump : public Lump
+	{
+	public:
+		void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) override;
+
+		struct Node
+		{
+            int16_t PartitionStartX;
+            int16_t PartitionStartY;
+			int16_t PartitionSlopeX;
+			int16_t PartitionSlopeY;
+            int16_t RightBBox[4];
+            int16_t LeftBBox[4];
+
+			uint16_t RightChild;
+			uint16_t LeftChild;
+
+			static constexpr size_t ReadSize = 28;
+		};
+
+		std::vector<Node> Contents;
+	};
+
+	class GLVertsLump : public Lump
+	{
+	public:
+		void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) override;
+
+		struct GlVert
+		{
+            float X;
+            float Y;
+		};
+
+        int FormatVersion = 0;
+
+		std::vector<GlVert> Contents;
+	};
+
+	class GLSegsLump : public Lump
+	{
+	public:
+		void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) override;
+
+        struct GLSeg
+        {
+			size_t Start = 0;
+            bool SartIsGL = false;
+			size_t End = 0;
+            bool EndIsGL = false;
+
+			size_t LineIndex = 0;
+			size_t SideIndex = 0;
+			size_t PartnerSegIndex = 0;
+        };
+
+		int FormatVersion = 0;
+
+		std::vector<GLSeg> Contents;
+	};
+
+	class GLSectorsLump : public Lump
+	{
+	public:
+		void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) override;
+
+		struct GLSector
+		{
+            size_t Count = 0;
+            size_t StartSegment = 0;
+		};
+
+		int FormatVersion = 0;
+
+		std::vector<GLSector> Contents;
+	};
+
 }
