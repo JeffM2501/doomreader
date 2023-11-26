@@ -16,7 +16,7 @@ namespace DoomRender
 
     void DrawMapLines(const WADFile::LevelMap& map)
     {
-        if (map.LumpDB.size() == 0)
+        if (map.SourceWad.LumpDB.size() == 0)
             return;
 
         for (const auto& line : map.Lines->Contents)
@@ -32,7 +32,7 @@ namespace DoomRender
 
     void DrawMapSectorPolygons(const WADFile::LevelMap& map, size_t selectedSector)
     {
-		if (map.LumpDB.size() == 0)
+		if (map.SourceWad.LumpDB.size() == 0)
 			return;
 
         for (const auto& sector : map.SectorCache)

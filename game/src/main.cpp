@@ -49,11 +49,11 @@ void ShowLevelInfoWindow()
         {
             for (const auto& entry : Map->Entries)
             {
-                bool selected = CurrentEntry == &entry.second;
+                bool selected = CurrentEntry == entry.second;
 
                 if (ImGui::Selectable(entry.first.c_str(), selected))
                 {
-                    CurrentEntry = &entry.second;
+                    CurrentEntry = entry.second;
                 }
             }
 
@@ -64,8 +64,8 @@ void ShowLevelInfoWindow()
             ImGui::Text("Lump Size = %d", int(CurrentEntry->LumpSize));
             ImGui::Text("Lump Offset = %d", int(CurrentEntry->LumpOffset));
 
-            auto itr = Map->LumpDB.find(CurrentEntry->Name);
-            if (itr != Map->LumpDB.end() && itr->second && itr->second->Visualize)
+            auto itr = Map->SourceWad.LumpDB.find(CurrentEntry->Name);
+            if (itr != Map->SourceWad.LumpDB.end() && itr->second && itr->second->Visualize)
             {
                 itr->second->Visualize(itr->second);
             }
@@ -136,7 +136,7 @@ void ShowGameInfoWindow()
             {
                 bool selected = false;
 
-                if (ImGui::Selectable(entry.Name.c_str(), selected))
+                if (ImGui::Selectable(entry.second.Name.c_str(), selected))
                 {
 
                 }
@@ -156,7 +156,7 @@ void ShowGameInfoWindow()
 					Map = &level;
 					SelectedSector = 0;
 
-					if ( Map->LumpDB.size() == 0)
+					if ( Map->SourceWad.LumpDB.size() == 0)
 						Map->Load();
 				}
 			}

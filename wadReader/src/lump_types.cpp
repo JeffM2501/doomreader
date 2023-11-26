@@ -6,6 +6,7 @@ namespace WADData
 {
     Lump* GetLump(const std::string& name)
     {
+		// map lumps
         if (name == THINGS)
             return new ThingsLump();
         if (name == VERTEXES)
@@ -23,12 +24,19 @@ namespace WADData
 		if (name == NODES)
 			return new NodesLump();
 
+		// map gl lumps
 		if (name == GL_VERT)
 			return new GLVertsLump();
 		if (name == GL_SEGS)
 			return new GLSegsLump();
         if (name == GL_SSECT)
             return new GLSubSectorsLump();
+
+
+		// texture lumps
+		if (name == PLAYPAL)
+			return new PlayPalLump();
+
 
         return nullptr;
     }
@@ -332,5 +340,25 @@ namespace WADData
 			offset += readSize;
 		}
     }
+
+	void PlayPalLump::Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion /*= 0*/)
+	{
+		size_t count = size / Palette::ReadSize;
+
+		for (size_t i = 0; i < count; i++)
+		{
+			size_t readOffset = offset;
+			for (int entryIndex = 0; entryIndex < 256; entryIndex++)
+			{
+				Color c = { 0,0,0,255 };
+				c.r = *(data + readOffset++);
+				c.g = *(data + readOffset++);
+				c.b = *(data + readOffset++);
+				Contents[i].Entry.push_back(c);
+			}
+
+			offset += Palette::ReadSize;
+		}
+	}
 
 }

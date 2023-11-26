@@ -16,7 +16,8 @@ public:
 
     uint8_t* BufferData = nullptr;
 
-    std::vector<WADData::DirectoryEntry> Entries;
+    std::unordered_map<std::string, WADData::DirectoryEntry> Entries;
+	std::unordered_map<std::string, WADData::Lump*> LumpDB;
 
     virtual ~WADFile()
     {
@@ -26,13 +27,29 @@ public:
 
 	virtual void Read(const char* fileName);
 
+	void LoadLumpData(const WADData::DirectoryEntry& entry);
+
+	template<class T>
+	T* GetLump(const std::string& name)
+	{
+		auto itr = LumpDB.find(name);
+		if (itr == LumpDB.end())
+			return nullptr;
+
+		return (T*)(itr->second);
+	}
+
+	WADData::PlayPalLump* PalettesLump = nullptr;;
+
 	class LevelMap
 	{
 	public:
-		std::string Name;
-		std::unordered_map<std::string, WADData::DirectoryEntry> Entries;
-		std::unordered_map<std::string, WADData::Lump*> LumpDB;
+		LevelMap(WADFile& source) : SourceWad(source) {};
 
+		WADFile& SourceWad;
+		std::string Name;
+		std::unordered_map<std::string, WADData::DirectoryEntry*> Entries;
+		
 		WADData::VertexesLump* Verts = nullptr;
 		WADData::LineDefLump* Lines = nullptr;
 		WADData::ThingsLump* Things = nullptr;
@@ -45,8 +62,6 @@ public:
 		WADData::GLVertsLump* GLVerts = nullptr;
 		WADData::GLSegsLump* GLSegs = nullptr;
 		WADData::GLSubSectorsLump* GLSubSectors = nullptr;
-
-		uint8_t* BufferData = nullptr;
 
 		struct SectorInfo
 		{
@@ -75,25 +90,18 @@ public:
 
 		std::set<size_t> LeafNodes;
 
+		std::unordered_map<std::string, Image> Flats;
+
 		void Load();
 
 		Vector2 GetVertex(size_t index, bool isGLVert) const;
 
 	protected:
-		void LoadLumpData(const WADData::DirectoryEntry& entry);
-
 		void FindLeafs(size_t node);
 
-		template<class T>
-		T* GetLump(const std::string& name)
-		{
-			auto itr = LumpDB.find(name);
-			if (itr == LumpDB.end())
-				return nullptr;
-
-			return (T*)(itr->second);
-		}
+		void CacheFlat(const std::string& flatName);
 	};
 
 	std::vector<LevelMap> Levels;
+
 };

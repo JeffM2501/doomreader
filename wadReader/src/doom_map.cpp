@@ -50,16 +50,18 @@ void WADFile::Read(const char* fileName)
 	int size = 0;
 	BufferData = LoadFileData(fileName, &size);
 
-	Entries = WADReader::ReadDirectoryEntries(BufferData);
+	auto rawDirectory = WADReader::ReadDirectoryEntries(BufferData);
 
 	Levels.clear();
 
-	LevelMap map;
+	LevelMap map(*this);
 	bool inMap = false;
 
 	// parse out the maps
-	for (auto& entry : Entries)
+	for (auto& entry : rawDirectory)
 	{
+		Entries[entry.Name] = entry;
+
 		if (entry.LumpSize == 0)
 		{
 			if (inMap)
@@ -69,7 +71,6 @@ void WADFile::Read(const char* fileName)
 				map.Name.clear();
 				map.Entries.clear();
 			}
-			map.BufferData = BufferData;
 			map.Name = entry.Name;
 			inMap = true;
 		}
@@ -79,7 +80,7 @@ void WADFile::Read(const char* fileName)
 			{
 				if (IsMapLump(entry.Name))
 				{
-					map.Entries[entry.Name] = entry;
+					map.Entries[entry.Name] = &Entries[entry.Name];
 				}
 				else
 				{
@@ -88,6 +89,14 @@ void WADFile::Read(const char* fileName)
 					map.Name.clear();
 					map.Entries.clear();
 					inMap = false;
+				}
+			}
+			else
+			{
+				if (entry.Name == WADData::PLAYPAL)
+				{
+					LoadLumpData(entry);
+					PalettesLump = GetLump<WADData::PlayPalLump>(WADData::PLAYPAL);
 				}
 			}
 		}
@@ -122,31 +131,65 @@ void WADFile::LevelMap::FindLeafs(size_t nodeId)
 	}
 }
 
+void WADFile::LevelMap::CacheFlat(const std::string& flatName)
+{
+	if (Flats.find(flatName) != Flats.end())
+		return;
+
+	auto entryItr = SourceWad.Entries.find(flatName);
+
+	if (entryItr != SourceWad.Entries.end() || entryItr->second.LumpSize != 4096)
+		return;
+
+	uint8_t* data = SourceWad.BufferData + entryItr->second.LumpOffset;
+
+	Image flatImage = GenImageColor(64, 64, BLANK);
+	for (int y = 0; y < 64; y++)
+	{
+		for (int x = 0; x < 64; x++)
+		{
+			uint8_t index = *(data + (y * 64 + x));
+
+			Color imageColr = SourceWad.PalettesLump->Contents[0].Entry[index];
+
+			ImageDrawPixel(&flatImage, x, y, imageColr);
+		}
+	}
+	
+	Flats[flatName] = flatImage;
+}
+
 void WADFile::LevelMap::Load()
 {
 	// we need to load this first since other parsers may read it's version number
-	LoadLumpData(Entries[WADData::GL_VERT]);
+	SourceWad.LoadLumpData(*Entries[WADData::GL_VERT]);
 
 	for (auto& [key,entity] : Entries)
-		LoadLumpData(entity);
+		SourceWad.LoadLumpData(*entity);
 
-	Verts = GetLump<WADData::VertexesLump>(WADData::VERTEXES);
-	Lines = GetLump<WADData::LineDefLump>(WADData::LINEDEFS);
-	Things = GetLump<WADData::ThingsLump>(WADData::THINGS);
-	Sectors = GetLump<WADData::SectorsLump>(WADData::SECTORS);
-	Sides = GetLump<WADData::SideDefLump>(WADData::SIDEDEFS);
-	Segs = GetLump<WADData::SegsLump>(WADData::SEGS);
-	Subsectors = GetLump<WADData::SubSectorsLump>(WADData::SSECTORS);
-	Nodes = GetLump<WADData::NodesLump>(WADData::NODES);
+	Verts = SourceWad.GetLump<WADData::VertexesLump>(WADData::VERTEXES);
+	Lines = SourceWad.GetLump<WADData::LineDefLump>(WADData::LINEDEFS);
+	Things = SourceWad.GetLump<WADData::ThingsLump>(WADData::THINGS);
+	Sectors = SourceWad.GetLump<WADData::SectorsLump>(WADData::SECTORS);
+	Sides = SourceWad.GetLump<WADData::SideDefLump>(WADData::SIDEDEFS);
+	Segs = SourceWad.GetLump<WADData::SegsLump>(WADData::SEGS);
+	Subsectors = SourceWad.GetLump<WADData::SubSectorsLump>(WADData::SSECTORS);
+	Nodes = SourceWad.GetLump<WADData::NodesLump>(WADData::NODES);
 
-	GLVerts = GetLump<WADData::GLVertsLump>(WADData::GL_VERT);
-	GLSegs = GetLump<WADData::GLSegsLump>(WADData::GL_SEGS);
-	GLSubSectors = GetLump<WADData::GLSubSectorsLump>(WADData::GL_SSECT);
+	GLVerts = SourceWad.GetLump<WADData::GLVertsLump>(WADData::GL_VERT);
+	GLSegs = SourceWad.GetLump<WADData::GLSegsLump>(WADData::GL_SEGS);
+	GLSubSectors = SourceWad.GetLump<WADData::GLSubSectorsLump>(WADData::GL_SSECT);
 
 	SectorCache.resize(Sectors->Contents.size());
 
-	for (auto& sector : SectorCache)
+	for (size_t sectorIndex = 0; sectorIndex < Sectors->Contents.size(); sectorIndex++)
+	{
+		auto& sector = SectorCache[sectorIndex];
 		sector.Tint = Color{ (uint8_t)GetRandomValue(128,255), (uint8_t)GetRandomValue(128,255) , (uint8_t)GetRandomValue(128,255) , 255 };
+
+		CacheFlat(Sectors->Contents[sectorIndex].FloorTexture);
+		CacheFlat(Sectors->Contents[sectorIndex].CeilingTexture);
+	}
 
 	// cache the edges in a sector
 	for (size_t lineIndex = 0; lineIndex < Lines->Contents.size(); lineIndex++)
@@ -210,7 +253,7 @@ Vector2 WADFile::LevelMap::GetVertex(size_t index, bool isGLVert) const
 	return Vector2{ (float)Verts->Contents[index].X, float(Verts->Contents[index].Y) };
 }
 
-void WADFile::LevelMap::LoadLumpData(const WADData::DirectoryEntry& entry)
+void WADFile::LoadLumpData(const WADData::DirectoryEntry& entry)
 {
 	if (LumpDB.find(entry.Name) != LumpDB.end())
 		return;

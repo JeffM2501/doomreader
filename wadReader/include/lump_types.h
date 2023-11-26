@@ -4,6 +4,8 @@
 #include <string>
 #include <functional>
 
+#include "raylib.h"
+
 namespace WADData
 {
     class Lump;
@@ -41,6 +43,8 @@ namespace WADData
     static constexpr char GL_SSECT[]    = "GL_SSECT";
     static constexpr char GL_NODES[]    = "GL_NODES";
     static constexpr char GL_PVS[]      = "GL_PVS";
+
+    static constexpr char PLAYPAL[] = "PLAYPAL";
 
     Lump* GetLump(const std::string& name);
 
@@ -255,5 +259,21 @@ namespace WADData
 
 		std::vector<GLSubSector> Contents;
 	};
+
+
+    class PlayPalLump : public Lump
+    {
+	public:
+		void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) override;
+
+		struct Palette
+		{
+            std::vector<Color> Entry;
+
+            static constexpr size_t ReadSize = 256 * 3;
+		};
+
+		std::unordered_map<size_t, Palette> Contents;
+    };
 
 }
