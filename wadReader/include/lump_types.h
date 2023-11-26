@@ -231,7 +231,7 @@ namespace WADData
             bool EndIsGL = false;
 
 			size_t LineIndex = 0;
-			size_t SideIndex = 0;
+			size_t Direction = 0;
 			size_t PartnerSegIndex = 0;
         };
 
@@ -240,12 +240,12 @@ namespace WADData
 		std::vector<GLSeg> Contents;
 	};
 
-	class GLSectorsLump : public Lump
+	class GLSubSectorsLump : public Lump
 	{
 	public:
 		void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) override;
 
-		struct GLSector
+		struct GLSubSector
 		{
             size_t Count = 0;
             size_t StartSegment = 0;
@@ -253,7 +253,7 @@ namespace WADData
 
 		int FormatVersion = 0;
 
-		std::vector<GLSector> Contents;
+		std::vector<GLSubSector> Contents;
 	};
 
 }

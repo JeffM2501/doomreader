@@ -27,6 +27,8 @@ namespace WADData
 			return new GLVertsLump();
 		if (name == GL_SEGS)
 			return new GLSegsLump();
+        if (name == GL_SSECT)
+            return new GLSubSectorsLump();
 
         return nullptr;
     }
@@ -257,7 +259,7 @@ namespace WADData
 				}
 
 				seg.LineIndex = WADReader::ReadUInt16(data, readOffset);
-				seg.SideIndex = WADReader::ReadUInt16(data, readOffset);
+				seg.Direction = WADReader::ReadUInt16(data, readOffset);
 				seg.PartnerSegIndex = WADReader::ReadUInt(data, readOffset);
 			}
 			else
@@ -277,12 +279,58 @@ namespace WADData
 				}
 
 				seg.LineIndex = WADReader::ReadUInt16(data, readOffset);
-				seg.SideIndex = WADReader::ReadUInt16(data, readOffset);
+				seg.Direction = WADReader::ReadUInt16(data, readOffset);
 				seg.PartnerSegIndex = WADReader::ReadUInt16(data, readOffset);
 			}
 
 			offset += readSize;
 		}
 	}
+
+    void GLSubSectorsLump::Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion /*= 0*/)
+    {
+        std::string magic = "XXXX";
+        memcpy((char*)magic.c_str(), data + offset, 4);
+
+        if (magic == "gNd3")
+            FormatVersion = 3;
+        else if (glVertsVersion == 5)
+            FormatVersion = 5;
+
+        size_t readSize = 4;
+        if (FormatVersion != 0)
+        {
+            readSize = 8;
+
+            if (FormatVersion == 3)
+            {
+                size -= 4;
+                offset += 4;
+            }
+        }
+
+        size_t count = size / readSize;
+
+        Contents.resize(count);
+
+		for (size_t i = 0; i < count; i++)
+		{
+			size_t readOffset = offset;
+			auto& subsector = Contents[i];
+
+			if (FormatVersion > 0)
+			{
+                subsector.Count = WADReader::ReadUInt(data, readOffset);
+                subsector.StartSegment = WADReader::ReadUInt(data, readOffset);
+			}
+			else
+			{
+                subsector.Count = WADReader::ReadUInt16(data, readOffset);
+                subsector.StartSegment = WADReader::ReadUInt16(data, readOffset);
+			}
+
+			offset += readSize;
+		}
+    }
 
 }

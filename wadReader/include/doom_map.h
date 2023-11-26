@@ -44,6 +44,7 @@ public:
 
 		WADData::GLVertsLump* GLVerts = nullptr;
 		WADData::GLSegsLump* GLSegs = nullptr;
+		WADData::GLSubSectorsLump* GLSubSectors = nullptr;
 
 		uint8_t* BufferData = nullptr;
 
@@ -75,6 +76,8 @@ public:
 		std::set<size_t> LeafNodes;
 
 		void Load();
+
+		Vector2 GetVertex(size_t index, bool isGLVert) const;
 
 	protected:
 		void LoadLumpData(const WADData::DirectoryEntry& entry);

@@ -141,6 +141,7 @@ void WADFile::LevelMap::Load()
 
 	GLVerts = GetLump<WADData::GLVertsLump>(WADData::GL_VERT);
 	GLSegs = GetLump<WADData::GLSegsLump>(WADData::GL_SEGS);
+	GLSubSectors = GetLump<WADData::GLSubSectorsLump>(WADData::GL_SSECT);
 
 	SectorCache.resize(Sectors->Contents.size());
 
@@ -183,10 +184,10 @@ void WADFile::LevelMap::Load()
 		}
 	}
 
-	for (size_t subSectorId = 0; subSectorId < Subsectors->Contents.size(); subSectorId++)
+	for (size_t subSectorId = 0; subSectorId < GLSubSectors->Contents.size(); subSectorId++)
 	{
-		auto& subsector = Subsectors->Contents[subSectorId];
-		auto& firstSeg = Segs->Contents[subsector.StartIndex];
+		auto& subsector = GLSubSectors->Contents[subSectorId];
+		auto& firstSeg = GLSegs->Contents[subsector.StartSegment];
 		auto& line = Lines->Contents[firstSeg.LineIndex];
 
 		size_t side = line.FrontSideDef;
@@ -199,6 +200,14 @@ void WADFile::LevelMap::Load()
 	}
 
 	FindLeafs(Nodes->Contents.size()-1);
+}
+
+Vector2 WADFile::LevelMap::GetVertex(size_t index, bool isGLVert) const
+{
+	if (isGLVert)
+		return Vector2{ GLVerts->Contents[index].X, GLVerts->Contents[index].Y};
+
+	return Vector2{ (float)Verts->Contents[index].X, float(Verts->Contents[index].Y) };
 }
 
 void WADFile::LevelMap::LoadLumpData(const WADData::DirectoryEntry& entry)

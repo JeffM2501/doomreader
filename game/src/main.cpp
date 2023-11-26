@@ -180,11 +180,11 @@ void DrawLevelLines()
 
 // 	if (Map)
 // 		DoomRender::DrawMapSectorPolygons(*Map, SelectedSector);
- //	if (Map)
- //		DoomRender::DrawMapSegs(*Map, SelectedSector, SelectedSubsector);
-
 	if (Map)
-		DoomRender::DrawMapNodes(*Map, SelectedSector, SelectedSubsector);
+		DoomRender::DrawMapSegs(*Map, SelectedSector, SelectedSubsector);
+
+// 	if (Map)
+// 		DoomRender::DrawMapNodes(*Map, SelectedSector, SelectedSubsector);
 
 	EndMode2D();
 

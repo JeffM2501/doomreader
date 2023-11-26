@@ -84,52 +84,49 @@ namespace DoomRender
 	{
         DrawMapSectorPolygons(map, selectedSector);
 
-        if (selectedSector < map.SectorCache.size())
-        {
-            const auto& sector = map.SectorCache[selectedSector];
+         if (selectedSector < map.SectorCache.size())
+         {
+             const auto& sector = map.SectorCache[selectedSector];
 
-            
             for (size_t i = 0; i < sector.SubSectors.size(); i++)
             {
                 size_t subSectorIndex = sector.SubSectors[i];
 
-                const auto& subSector = map.Subsectors->Contents[subSectorIndex];
+                if (i == selectedSubSector)
+                    continue;
+
+                const auto& subSector = map.GLSubSectors->Contents[subSectorIndex];
+
+                for (size_t index = subSector.StartSegment; index < subSector.StartSegment + subSector.Count; index++)
+                {
+                    const auto& segment = map.GLSegs->Contents[index];
+
+                    Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
+				    Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
+
+                    DrawLineEx(sp, ep,2, ColorAlpha(YELLOW ,0.5f));
+                }
+            }
+
+            for (size_t i = 0; i < sector.SubSectors.size(); i++)
+            {
+                size_t subSectorIndex = sector.SubSectors[i];
 
                 if (i != selectedSubSector)
                     continue;
 
-                for (size_t index = subSector.StartIndex; index < subSector.StartIndex + subSector.Count; index++)
+                const auto& subSector = map.GLSubSectors->Contents[subSectorIndex];
+
+                for (size_t index = subSector.StartSegment; index < subSector.StartSegment + subSector.Count; index++)
                 {
-                    const auto& segment = map.Segs->Contents[index];
+                    const auto& segment = map.GLSegs->Contents[index];
 
-                    Vector2 sp = Vector2{ (float)map.Verts->Contents[segment.Start].X, (float)map.Verts->Contents[segment.Start].Y };
-					Vector2 ep = Vector2{ (float)map.Verts->Contents[segment.End].X, (float)map.Verts->Contents[segment.End].Y };
+                    Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
+                    Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
 
-                    Vector2 lineVec = Vector2Subtract(ep, sp);
-
-                    lineVec = Vector2Normalize(lineVec);
-
-                    Vector2 normalLine = Vector2Add(sp, Vector2Scale(lineVec, 10));
-
-                    DrawLineEx(sp, ep, 4, RED);
-
-                    Vector2 offsetSP = Vector2Add(sp, Vector2Scale(lineVec, segment.Offset));
-
-                    DrawLineEx(sp, offsetSP, 2, BLUE);
-
-                    DrawLineEx(sp, normalLine, 1, GREEN);
-
-                    // now show the lineindex
-
-                    const auto& refedLine = map.Lines->Contents[segment.LineIndex];
-
-					sp = Vector2{ (float)map.Verts->Contents[refedLine.Start].X, (float)map.Verts->Contents[refedLine.Start].Y };
-					ep = Vector2{ (float)map.Verts->Contents[refedLine.End].X, (float)map.Verts->Contents[refedLine.End].Y };
-
-                    DrawLineEx(sp, ep, 4, PURPLE);
+                    DrawLineEx(sp, ep, 5, PURPLE);
                 }
-
-				break;
+                break;
             }
 		}
 	}
