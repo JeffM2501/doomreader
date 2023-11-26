@@ -151,50 +151,90 @@ namespace DoomRender
 		}
 	}
 
-    bool IsLeaf(uint16_t childId)
-    {
-        return childId & (1 << 15);
-    }
-
-    size_t GetSectorId(uint16_t childId)
-    {
-        return childId & ~(1 << 15);;
-    }
-
-    void DrawBBOX(int16_t bbox[4], Color color)
-    {
-        Rectangle rect = { float(bbox[2]), float(bbox[1]), float(bbox[3] - bbox[2]), float(bbox[0] - bbox[1]) };
-      //  DrawRectangleLinesEx(rect, 2, color);
-
-        DrawCircle(bbox[2], bbox[0], 10, PURPLE);
-        DrawCircle(bbox[3], bbox[1], 10, DARKPURPLE);
-    }
-
-    void DrawNode(const WADFile::LevelMap& map, size_t nodeID)
-    {
-        auto& node = map.Nodes->Contents[nodeID];
-
-        DrawBBOX(node.RightBBox, MAROON);
-        DrawBBOX(node.LeftBBox, SKYBLUE);
-
-        DrawLine(node.PartitionStartX, node.PartitionStartY, node.PartitionStartX + node.PartitionSlopeX, node.PartitionStartY + node.PartitionSlopeY, YELLOW);
-
-        if (!IsLeaf(node.RightChild))
-        {
-            DrawNode(map, node.RightChild);
-        }
-
-		if (!IsLeaf(node.LeftChild))
-		{
-			DrawNode(map, node.LeftChild);
-		}
-    }
-
-	void DrawMapNodes(const WADFile::LevelMap& map, size_t selectedSector, size_t selectedSubSector)
+	void DrawMap3d(const WADFile::LevelMap& map)
 	{
-        DrawMapSectorPolygons(map, selectedSector);
+		for (const auto& sector : map.SectorCache)
+		{
+			auto& rawSector = map.Sectors->Contents[sector.SectorIndex];
+			Texture2D floor = GetFlat(rawSector.FloorTexture, map.SourceWad);
+			rlSetTexture(floor.id);
 
-      //  DrawNode(map, map.Nodes->Contents.size() - 1);
+			rlBegin(RL_QUADS);
+			rlColor4f(1, 1, 1, 1);
+			rlNormal3f(0, 0, 1);
+
+			for (size_t subsectorIndex : sector.SubSectors)
+			{
+				const auto& glSubSector = map.GLSubSectors->Contents[subsectorIndex];
+
+				float lightLevel = (rawSector.LightLevel / 255.0f) * 0.75f;
+				rlColor4f(lightLevel, lightLevel, lightLevel, 1);
+
+				Vector2 origin = map.GetVertex(map.GLSegs->Contents[glSubSector.StartSegment].Start, map.GLSegs->Contents[glSubSector.StartSegment].SartIsGL);
+
+				for (size_t index = glSubSector.StartSegment + 1; index < glSubSector.StartSegment + glSubSector.Count; index++)
+				{
+					const auto& segment = map.GLSegs->Contents[index];
+
+					Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
+					Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
+
+					rlTexCoord2f(ep.x / 64, ep.y / 64);
+					rlVertex3f(ep.x, ep.y, rawSector.CeilingHeight);
+
+					rlTexCoord2f(sp.x / 64, sp.y / 64);
+					rlVertex3f(sp.x, sp.y, rawSector.CeilingHeight);
+
+					rlTexCoord2f(origin.x / 64, origin.y / 64);
+					rlVertex3f(origin.x, origin.y, rawSector.CeilingHeight);
+					rlVertex3f(origin.x, origin.y, rawSector.CeilingHeight);
+				}
+			}
+
+			rlEnd();
+
+			rlDrawRenderBatchActive();
+
+			Texture2D ceiling = GetFlat(rawSector.CeilingTexture, map.SourceWad);
+			rlSetTexture(ceiling.id);
+
+			rlBegin(RL_QUADS);
+			rlColor4f(1, 1, 1, 1);
+			rlNormal3f(0, 0, 1);
+
+			for (size_t subsectorIndex : sector.SubSectors)
+			{
+				const auto& glSubSector = map.GLSubSectors->Contents[subsectorIndex];
+
+				float lightLevel = rawSector.LightLevel / 255.0f;
+				rlColor4f(lightLevel, lightLevel, lightLevel, 1);
+
+				Vector2 origin = map.GetVertex(map.GLSegs->Contents[glSubSector.StartSegment].Start, map.GLSegs->Contents[glSubSector.StartSegment].SartIsGL);
+
+				for (size_t index = glSubSector.StartSegment + 1; index < glSubSector.StartSegment + glSubSector.Count; index++)
+				{
+					const auto& segment = map.GLSegs->Contents[index];
+
+					Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
+					Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
+
+					rlTexCoord2f(origin.x / 64, origin.y / 64);
+					rlVertex3f(origin.x, origin.y, rawSector.FloorHeight);
+					rlVertex3f(origin.x, origin.y, rawSector.FloorHeight);
+
+					rlTexCoord2f(sp.x / 64, sp.y / 64);
+					rlVertex3f(sp.x, sp.y, rawSector.FloorHeight);
+
+					rlTexCoord2f(ep.x / 64, ep.y / 64);
+					rlVertex3f(ep.x, ep.y, rawSector.FloorHeight);
+				}
+			}
+
+			rlEnd();
+
+			rlDrawRenderBatchActive();
+			rlSetTexture(0);
+		}
 	}
 
 }

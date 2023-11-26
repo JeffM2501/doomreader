@@ -10,6 +10,8 @@ Doom Level Reader Test
 
 #include "raylib.h"
 #include "raymath.h"
+#include "rcamera.h"
+#include "rlgl.h"
 
 #include "rlImGui.h"
 #include "imgui.h"
@@ -26,6 +28,8 @@ WADFile GameWad;
 
 Camera2D MapViewCamera = { 0 };
 constexpr float DefaultZoom = 0.125f;
+
+Camera3D ViewCamera = { 0 };
 
 size_t SelectedSector = 0;
 size_t SelectedSubsector = 0;
@@ -114,7 +118,7 @@ void ShowGameInfoWindow()
     ImGui::End();
 }
 
-void DrawLevelLines()
+void DrawMapView()
 {
 	MapViewCamera.offset = Vector2{ GetScreenWidth() * 0.5f, (float)GetScreenHeight() * 0.5f };
 
@@ -136,31 +140,71 @@ void DrawLevelLines()
 	DrawTexture(SectorViewRT.texture, 0, 0, WHITE);
 }
 
+void Draw3DView()
+{
+	if (!Map || !View3D)
+		return;
+
+	BeginMode3D(ViewCamera);
+	DrawCube(Vector3Zero(), 1, 1, 1, RED);
+
+	rlPushMatrix();
+
+	rlScalef(0.1f, 0.1f, 0.1f);
+	DoomRender::DrawMap3d(*Map);
+	rlPopMatrix();
+
+	EndMode3D();
+}
+
 void UpdateMapInput()
 {
-	float panSpeed = GetFrameTime() * 1000;
+	float panSpeed = GetFrameTime() * View3D ? 0.5f : 1000;
 	if (!ImGui::GetIO().WantCaptureKeyboard)
 	{
-		if (IsKeyDown(KEY_W))
-			MapViewCamera.target.y -= panSpeed;
-		if (IsKeyDown(KEY_S))
-			MapViewCamera.target.y += panSpeed;
+		if (View3D)
+		{
+			if (IsKeyDown(KEY_W))
+				CameraMoveForward(&ViewCamera, panSpeed, false);
+			if (IsKeyDown(KEY_S))
+				CameraMoveForward(&ViewCamera, -panSpeed, false);
 
-		if (IsKeyDown(KEY_D))
-			MapViewCamera.target.x -= panSpeed;
-		if (IsKeyDown(KEY_A))
-			MapViewCamera.target.x += panSpeed;
+ 			if (IsKeyDown(KEY_E))
+				CameraMoveUp(&ViewCamera, panSpeed);
+ 			if (IsKeyDown(KEY_Q))
+				CameraMoveUp(&ViewCamera, -panSpeed);
+		}
+		else
+		{
+			if (IsKeyDown(KEY_W))
+				MapViewCamera.target.y -= panSpeed;
+			if (IsKeyDown(KEY_S))
+				MapViewCamera.target.y += panSpeed;
+
+			if (IsKeyDown(KEY_D))
+				MapViewCamera.target.x -= panSpeed;
+			if (IsKeyDown(KEY_A))
+				MapViewCamera.target.x += panSpeed;
+		}
 	}
 
 	if (!ImGui::GetIO().WantCaptureMouse)
 	{
-		float mouseScale = 1.0f / MapViewCamera.zoom;
-		if (IsMouseButtonDown(MOUSE_RIGHT_BUTTON))
-			MapViewCamera.target = Vector2Add(MapViewCamera.target, Vector2{ GetMouseDelta().x * -mouseScale, GetMouseDelta().y * mouseScale });
+		if (View3D && IsMouseButtonDown(MOUSE_RIGHT_BUTTON))
+		{
+			CameraYaw(&ViewCamera, GetMouseDelta().x * 0.001f, false);
+			CameraPitch(&ViewCamera, GetMouseDelta().y * -0.001f, true, false, false);
+		}
+		else
+		{
+			float mouseScale = 1.0f / MapViewCamera.zoom;
+			if (IsMouseButtonDown(MOUSE_RIGHT_BUTTON))
+				MapViewCamera.target = Vector2Add(MapViewCamera.target, Vector2{ GetMouseDelta().x * -mouseScale, GetMouseDelta().y * mouseScale });
 
-		MapViewCamera.zoom += GetMouseWheelMove() * 0.0625f;
-		if (MapViewCamera.zoom < DefaultZoom)
-			MapViewCamera.zoom = DefaultZoom;
+			MapViewCamera.zoom += GetMouseWheelMove() * 0.0625f;
+			if (MapViewCamera.zoom < DefaultZoom)
+				MapViewCamera.zoom = DefaultZoom;
+		}
 	}
 }
 
@@ -173,6 +217,11 @@ int main ()
 	rlImGuiSetup(true);
 
 	MapViewCamera.zoom = DefaultZoom;
+
+	ViewCamera.fovy = 45;
+	ViewCamera.up.z = 1;
+	ViewCamera.position.y = -10;
+	ViewCamera.position.z = 3;
 
 	GameWad.Read("resources/glDOOMWAD.wad");
 
@@ -199,7 +248,8 @@ int main ()
 		BeginDrawing();
 		ClearBackground(BLACK);
 
-		DrawLevelLines();
+		DrawMapView();
+		Draw3DView();
 
 		rlImGuiBegin();
 
