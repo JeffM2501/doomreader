@@ -27,24 +27,8 @@ namespace DoomRender
     {
 		for (const auto& thing : map.Things->Contents)
 		{
-			DrawCircle(thing.X, thing.Y, 10, YELLOW);
+			DrawCircle(thing.X, thing.Y, 5, YELLOW);
 		}
-    }
-
-    void DrawMapLines(const WADFile::LevelMap& map)
-    {
-        if (map.Verts == nullptr)
-            return;
-
-        for (const auto& line : map.Lines->Contents)
-        {
-            auto& sp = map.Verts->Contents[line.Start];
-            auto& ep = map.Verts->Contents[line.End];
-
-            DrawLine(sp.X, sp.Y, ep.X, ep.Y, WHITE);
-        }
-
-        DrawThigs(map);
     }
 
     void DrawMapSectorPolygons(const WADFile::LevelMap& map, size_t selectedSector)
@@ -89,18 +73,11 @@ namespace DoomRender
        
         rlSetLineWidth(1);
 
-        for (const auto& glVert : map.GLVerts->Contents)
-        {
-            DrawCircleV(Vector2{ glVert.X, glVert.Y }, 5, PINK);
-        }
-
         DrawThigs(map);
     }
 
 	void DrawMapSegs(const WADFile::LevelMap& map, size_t selectedSector, size_t selectedSubSector)
 	{
-        DrawMapSectorPolygons(map, selectedSector);
-
         for (const auto& sector : map.SectorCache)
         {
             auto& rawSector = map.Sectors->Contents[sector.SectorIndex];
@@ -145,29 +122,11 @@ namespace DoomRender
             rlSetTexture(0);
         }
 
+        DrawMapSectorPolygons(map, selectedSector);
+
 		if (selectedSector < map.SectorCache.size())
 		{
 			const auto& sector = map.SectorCache[selectedSector];
-
-			for (size_t i = 0; i < sector.SubSectors.size(); i++)
-			{
-				size_t subSectorIndex = sector.SubSectors[i];
-
-				if (i == selectedSubSector)
-					continue;
-
-				const auto& subSector = map.GLSubSectors->Contents[subSectorIndex];
-
-				for (size_t index = subSector.StartSegment; index < subSector.StartSegment + subSector.Count; index++)
-				{
-					const auto& segment = map.GLSegs->Contents[index];
-
-					Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
-					Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
-
-					DrawLineEx(sp, ep, 2, ColorAlpha(YELLOW, 0.5f));
-				}
-			}
 
 			for (size_t i = 0; i < sector.SubSectors.size(); i++)
 			{

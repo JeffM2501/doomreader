@@ -20,9 +20,6 @@ Doom Level Reader Test
 #include "reader.h"
 
 WADFile::LevelMap* Map;
-
-const WADData::DirectoryEntry* CurrentEntry = nullptr;
-
 RenderTexture SectorViewRT;
 
 WADFile GameWad;
@@ -33,43 +30,13 @@ constexpr float DefaultZoom = 0.125f;
 size_t SelectedSector = 0;
 size_t SelectedSubsector = 0;
 
-
-void AddChildNodes(size_t nodeId)
-{
-
-}
+bool View3D = false;
 
 void ShowLevelInfoWindow()
 {
-    if (ImGui::Begin("Directory Entries") && Map)
+    if (ImGui::Begin("Map Info") && Map)
     {
-		ImGui::TextUnformatted("Lumps");
-
-        if (ImGui::BeginListBox("##Entries", ImVec2(-FLT_MIN, 3 * ImGui::GetTextLineHeightWithSpacing())))
-        {
-            for (const auto& entry : Map->Entries)
-            {
-                bool selected = CurrentEntry == &entry.second;
-
-                if (ImGui::Selectable(entry.first.c_str(), selected))
-                {
-                    CurrentEntry = &entry.second;
-                }
-            }
-
-            ImGui::EndListBox();
-        }
-        if (CurrentEntry)
-        {
-            ImGui::Text("Lump Size = %d", int(CurrentEntry->LumpSize));
-            ImGui::Text("Lump Offset = %d", int(CurrentEntry->LumpOffset));
-
-            auto* lump = Map->SourceWad.LumpDB.GetLump<WADData::Lump>(CurrentEntry->Name);
-            if (lump && lump->Visualize)
-            {
-				lump->Visualize(lump);
-            }
-        }
+		ImGui::TextUnformatted(Map->Name.c_str());
 
 		ImGui::TextUnformatted("Sectors");
 		if (ImGui::BeginListBox("##Sectors", ImVec2(-FLT_MIN, 5 * ImGui::GetTextLineHeightWithSpacing())))
@@ -104,23 +71,6 @@ void ShowLevelInfoWindow()
 
 			ImGui::EndListBox();
 		}
-
-		ImGui::TextUnformatted("Nodes");
-		if (ImGui::BeginListBox("##Nodes", ImVec2(-FLT_MIN, 20 * ImGui::GetTextLineHeightWithSpacing())))
-		{
-			for (size_t i = 0; i < Map->SectorCache[SelectedSector].SubSectors.size(); i++)
-			{
-				const char* text = TextFormat("%d", i + 1);
-
-				bool selected = SelectedSubsector == i;
-				if (ImGui::Selectable(text, selected))
-				{
-					SelectedSubsector = i;
-				}
-			}
-
-			ImGui::EndListBox();
-		}
     }
     ImGui::End();
 }
@@ -129,22 +79,15 @@ void ShowGameInfoWindow()
 {
     if (ImGui::Begin("Game WAD"))
     {
-		ImGui::TextUnformatted("Lumps");
-        if (ImGui::BeginListBox("###GameEntries", ImVec2(-FLT_MIN, 5 * ImGui::GetTextLineHeightWithSpacing())))
-        {
-            for (const auto& entry : GameWad.Entries)
-            {
-                bool selected = false;
-
-                if (ImGui::Selectable(entry.second.Name.c_str(), selected))
-                {
-
-                }
-            }
-
-            ImGui::EndListBox();
-        }
 		ImGui::TextUnformatted("Maps");
+		ImGui::SameLine();
+
+		if (ImGui::RadioButton("2d", !View3D))
+			View3D = false;
+		ImGui::SameLine();
+		if (ImGui::RadioButton("3d", View3D))
+			View3D = true;
+
 		if (ImGui::BeginListBox("###Maps", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
 		{
 			for (auto& level : GameWad.Levels)
@@ -164,6 +107,9 @@ void ShowGameInfoWindow()
 
 			ImGui::EndListBox();
 		}
+
+		ImGui::TextUnformatted("View Mode");
+		
     }
     ImGui::End();
 }
@@ -172,6 +118,9 @@ void DrawLevelLines()
 {
 	MapViewCamera.offset = Vector2{ GetScreenWidth() * 0.5f, (float)GetScreenHeight() * 0.5f };
 
+	if (!Map || View3D)
+		return;
+
 	BeginTextureMode(SectorViewRT);
 	ClearBackground(BLANK);
 
@@ -179,13 +128,7 @@ void DrawLevelLines()
 	DrawLine(-25, 0, 100, 0, RED);
 	DrawLine(0, -25, 0, 100, GREEN);
 
-// 	if (Map)
-// 		DoomRender::DrawMapSectorPolygons(*Map, SelectedSector);
-	if (Map)
-		DoomRender::DrawMapSegs(*Map, SelectedSector, SelectedSubsector);
-
-// 	if (Map)
-// 		DoomRender::DrawMapNodes(*Map, SelectedSector, SelectedSubsector);
+	DoomRender::DrawMapSegs(*Map, SelectedSector, SelectedSubsector);
 
 	EndMode2D();
 
