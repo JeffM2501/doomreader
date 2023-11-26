@@ -42,6 +42,8 @@ namespace WADReader
     {
         WADData::DirectoryEntry entry;
 
+        entry.BufferData = buffer;
+
         entry.LumpOffset = ReadInt(buffer, readOffset);
         entry.LumpSize = ReadInt(buffer, readOffset);
 

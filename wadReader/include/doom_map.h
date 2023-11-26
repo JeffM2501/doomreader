@@ -17,7 +17,27 @@ public:
     uint8_t* BufferData = nullptr;
 
     std::unordered_map<std::string, WADData::DirectoryEntry> Entries;
-	std::unordered_map<std::string, WADData::Lump*> LumpDB;
+
+	class LumpDatabase
+	{
+	public:
+		template<class T>
+		T* GetLump(const std::string& name)
+		{
+			auto itr = Lumps.find(name);
+			if (itr == Lumps.end())
+				return nullptr;
+
+			return (T*)(itr->second);
+		}
+
+		void LoadLumpData(const WADData::DirectoryEntry& entry);
+
+	protected:
+		std::unordered_map<std::string, WADData::Lump*> Lumps;
+	};
+
+	LumpDatabase LumpDB;
 
     virtual ~WADFile()
     {
@@ -27,17 +47,6 @@ public:
 
 	virtual void Read(const char* fileName);
 
-	void LoadLumpData(const WADData::DirectoryEntry& entry);
-
-	template<class T>
-	T* GetLump(const std::string& name)
-	{
-		auto itr = LumpDB.find(name);
-		if (itr == LumpDB.end())
-			return nullptr;
-
-		return (T*)(itr->second);
-	}
 
 	WADData::PlayPalLump* PalettesLump = nullptr;;
 
@@ -48,7 +57,8 @@ public:
 
 		WADFile& SourceWad;
 		std::string Name;
-		std::unordered_map<std::string, WADData::DirectoryEntry*> Entries;
+		std::unordered_map<std::string, WADData::DirectoryEntry> Entries;
+		LumpDatabase LumpDB;
 		
 		WADData::VertexesLump* Verts = nullptr;
 		WADData::LineDefLump* Lines = nullptr;
@@ -84,13 +94,13 @@ public:
 			std::vector<size_t>  SubSectors;
 
 			Color Tint = WHITE;
+
+			size_t SectorIndex = 0;
 		};
 
 		std::vector<SectorInfo> SectorCache;
 
 		std::set<size_t> LeafNodes;
-
-		std::unordered_map<std::string, Image> Flats;
 
 		void Load();
 
@@ -104,4 +114,5 @@ public:
 
 	std::vector<LevelMap> Levels;
 
+	std::unordered_map<std::string, Image> Flats;
 };

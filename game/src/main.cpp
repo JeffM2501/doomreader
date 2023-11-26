@@ -49,11 +49,11 @@ void ShowLevelInfoWindow()
         {
             for (const auto& entry : Map->Entries)
             {
-                bool selected = CurrentEntry == entry.second;
+                bool selected = CurrentEntry == &entry.second;
 
                 if (ImGui::Selectable(entry.first.c_str(), selected))
                 {
-                    CurrentEntry = entry.second;
+                    CurrentEntry = &entry.second;
                 }
             }
 
@@ -64,10 +64,10 @@ void ShowLevelInfoWindow()
             ImGui::Text("Lump Size = %d", int(CurrentEntry->LumpSize));
             ImGui::Text("Lump Offset = %d", int(CurrentEntry->LumpOffset));
 
-            auto itr = Map->SourceWad.LumpDB.find(CurrentEntry->Name);
-            if (itr != Map->SourceWad.LumpDB.end() && itr->second && itr->second->Visualize)
+            auto* lump = Map->SourceWad.LumpDB.GetLump<WADData::Lump>(CurrentEntry->Name);
+            if (lump && lump->Visualize)
             {
-                itr->second->Visualize(itr->second);
+				lump->Visualize(lump);
             }
         }
 
@@ -155,8 +155,9 @@ void ShowGameInfoWindow()
 				{
 					Map = &level;
 					SelectedSector = 0;
+					SelectedSubsector = 0;
 
-					if ( Map->SourceWad.LumpDB.size() == 0)
+					if (Map->Verts == nullptr)
 						Map->Load();
 				}
 			}
@@ -233,7 +234,7 @@ int main ()
 	GameWad.Read("resources/glDOOMWAD.wad");
 
 	if (GameWad.Levels.size() > 0)
-		Map = &(*GameWad.Levels.begin());
+		Map = &GameWad.Levels[0];
 
 	if (Map)
 		Map->Load();

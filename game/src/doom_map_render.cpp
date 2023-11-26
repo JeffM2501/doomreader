@@ -6,6 +6,23 @@
 
 namespace DoomRender
 {
+    std::unordered_map<std::string, Texture2D> FlatCache;
+
+    Texture2D GetFlat(const std::string& name, const WADFile& wad)
+    {
+        auto itr = FlatCache.find(name);
+        if (itr != FlatCache.end())
+            return itr->second;
+
+        auto imageItr = wad.Flats.find(name);
+        if (imageItr == wad.Flats.end())
+            return Texture2D{ 0 };
+
+        Texture2D texture = LoadTextureFromImage(imageItr->second);
+        FlatCache[name] = texture;
+        return texture;
+    }
+
     void DrawThigs(const WADFile::LevelMap& map)
     {
 		for (const auto& thing : map.Things->Contents)
@@ -16,7 +33,7 @@ namespace DoomRender
 
     void DrawMapLines(const WADFile::LevelMap& map)
     {
-        if (map.SourceWad.LumpDB.size() == 0)
+        if (map.Verts == nullptr)
             return;
 
         for (const auto& line : map.Lines->Contents)
@@ -32,7 +49,7 @@ namespace DoomRender
 
     void DrawMapSectorPolygons(const WADFile::LevelMap& map, size_t selectedSector)
     {
-		if (map.SourceWad.LumpDB.size() == 0)
+        if (map.Verts == nullptr)
 			return;
 
         for (const auto& sector : map.SectorCache)
@@ -84,50 +101,94 @@ namespace DoomRender
 	{
         DrawMapSectorPolygons(map, selectedSector);
 
-         if (selectedSector < map.SectorCache.size())
-         {
-             const auto& sector = map.SectorCache[selectedSector];
+        for (const auto& sector : map.SectorCache)
+        {
+            auto& rawSector = map.Sectors->Contents[sector.SectorIndex];
+            Texture2D floor = GetFlat(rawSector.FloorTexture, map.SourceWad);
+            rlSetTexture(floor.id);
 
-            for (size_t i = 0; i < sector.SubSectors.size(); i++)
+            rlBegin(RL_QUADS);
+            rlColor4f(1, 1, 1, 1);
+            rlNormal3f(0, 0, 1);
+
+            for (size_t subsectorIndex : sector.SubSectors)
             {
-                size_t subSectorIndex = sector.SubSectors[i];
+                const auto& glSubSector = map.GLSubSectors->Contents[subsectorIndex];
 
-                if (i == selectedSubSector)
-                    continue;
+                float lightLevel = rawSector.LightLevel / 255.0f;
+                rlColor4f(lightLevel, lightLevel, lightLevel, 1);
 
-                const auto& subSector = map.GLSubSectors->Contents[subSectorIndex];
+                Vector2 origin = map.GetVertex(map.GLSegs->Contents[glSubSector.StartSegment].Start, map.GLSegs->Contents[glSubSector.StartSegment].SartIsGL);
 
-                for (size_t index = subSector.StartSegment; index < subSector.StartSegment + subSector.Count; index++)
-                {
-                    const auto& segment = map.GLSegs->Contents[index];
+				for (size_t index = glSubSector.StartSegment+1; index < glSubSector.StartSegment + glSubSector.Count; index++)
+				{
+					const auto& segment = map.GLSegs->Contents[index];
 
                     Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
-				    Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
+					Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
 
-                    DrawLineEx(sp, ep,2, ColorAlpha(YELLOW ,0.5f));
-                }
+                    rlTexCoord2f(origin.x/64, origin.y / 64);
+                    rlVertex2f(origin.x, origin.y);
+                    rlVertex2f(origin.x, origin.y);
+
+					rlTexCoord2f(sp.x / 64, sp.y / 64);
+					rlVertex2f(sp.x, sp.y);
+
+					rlTexCoord2f(ep.x / 64, ep.y / 64);
+					rlVertex2f(ep.x, ep.y);
+				}
             }
 
-            for (size_t i = 0; i < sector.SubSectors.size(); i++)
-            {
-                size_t subSectorIndex = sector.SubSectors[i];
+            rlEnd();
 
-                if (i != selectedSubSector)
-                    continue;
+            rlDrawRenderBatchActive();
+            rlSetTexture(0);
+        }
 
-                const auto& subSector = map.GLSubSectors->Contents[subSectorIndex];
+		if (selectedSector < map.SectorCache.size())
+		{
+			const auto& sector = map.SectorCache[selectedSector];
 
-                for (size_t index = subSector.StartSegment; index < subSector.StartSegment + subSector.Count; index++)
-                {
-                    const auto& segment = map.GLSegs->Contents[index];
+			for (size_t i = 0; i < sector.SubSectors.size(); i++)
+			{
+				size_t subSectorIndex = sector.SubSectors[i];
 
-                    Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
-                    Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
+				if (i == selectedSubSector)
+					continue;
 
-                    DrawLineEx(sp, ep, 5, PURPLE);
-                }
-                break;
-            }
+				const auto& subSector = map.GLSubSectors->Contents[subSectorIndex];
+
+				for (size_t index = subSector.StartSegment; index < subSector.StartSegment + subSector.Count; index++)
+				{
+					const auto& segment = map.GLSegs->Contents[index];
+
+					Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
+					Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
+
+					DrawLineEx(sp, ep, 2, ColorAlpha(YELLOW, 0.5f));
+				}
+			}
+
+			for (size_t i = 0; i < sector.SubSectors.size(); i++)
+			{
+				size_t subSectorIndex = sector.SubSectors[i];
+
+				if (i != selectedSubSector)
+					continue;
+
+				const auto& subSector = map.GLSubSectors->Contents[subSectorIndex];
+
+				for (size_t index = subSector.StartSegment; index < subSector.StartSegment + subSector.Count; index++)
+				{
+					const auto& segment = map.GLSegs->Contents[index];
+
+					Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
+					Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
+
+					DrawLineEx(sp, ep, 5, PURPLE);
+				}
+				break;
+			}
 		}
 	}
 

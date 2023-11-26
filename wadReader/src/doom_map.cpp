@@ -60,7 +60,10 @@ void WADFile::Read(const char* fileName)
 	// parse out the maps
 	for (auto& entry : rawDirectory)
 	{
-		Entries[entry.Name] = entry;
+		bool add = true;
+
+		if (!IsMapLump(entry.Name))
+			Entries[entry.Name] = entry;
 
 		if (entry.LumpSize == 0)
 		{
@@ -80,7 +83,7 @@ void WADFile::Read(const char* fileName)
 			{
 				if (IsMapLump(entry.Name))
 				{
-					map.Entries[entry.Name] = &Entries[entry.Name];
+					map.Entries[entry.Name] = entry;
 				}
 				else
 				{
@@ -95,8 +98,8 @@ void WADFile::Read(const char* fileName)
 			{
 				if (entry.Name == WADData::PLAYPAL)
 				{
-					LoadLumpData(entry);
-					PalettesLump = GetLump<WADData::PlayPalLump>(WADData::PLAYPAL);
+					LumpDB.LoadLumpData(entry);
+					PalettesLump = LumpDB.GetLump<WADData::PlayPalLump>(WADData::PLAYPAL);
 				}
 			}
 		}
@@ -133,15 +136,15 @@ void WADFile::LevelMap::FindLeafs(size_t nodeId)
 
 void WADFile::LevelMap::CacheFlat(const std::string& flatName)
 {
-	if (Flats.find(flatName) != Flats.end())
+	if (SourceWad.Flats.find(flatName) != SourceWad.Flats.end())
 		return;
 
 	auto entryItr = SourceWad.Entries.find(flatName);
 
-	if (entryItr != SourceWad.Entries.end() || entryItr->second.LumpSize != 4096)
+	if (entryItr == SourceWad.Entries.end() || entryItr->second.LumpSize != 4096)
 		return;
 
-	uint8_t* data = SourceWad.BufferData + entryItr->second.LumpOffset;
+	uint8_t* data = entryItr->second.BufferData + entryItr->second.LumpOffset;
 
 	Image flatImage = GenImageColor(64, 64, BLANK);
 	for (int y = 0; y < 64; y++)
@@ -152,39 +155,40 @@ void WADFile::LevelMap::CacheFlat(const std::string& flatName)
 
 			Color imageColr = SourceWad.PalettesLump->Contents[0].Entry[index];
 
-			ImageDrawPixel(&flatImage, x, y, imageColr);
+			ImageDrawPixel(&flatImage, x, 64-y, imageColr);
 		}
 	}
 	
-	Flats[flatName] = flatImage;
+	SourceWad.Flats[flatName] = flatImage;
 }
 
 void WADFile::LevelMap::Load()
 {
 	// we need to load this first since other parsers may read it's version number
-	SourceWad.LoadLumpData(*Entries[WADData::GL_VERT]);
+	LumpDB.LoadLumpData(Entries[WADData::GL_VERT]);
 
 	for (auto& [key,entity] : Entries)
-		SourceWad.LoadLumpData(*entity);
+		LumpDB.LoadLumpData(entity);
 
-	Verts = SourceWad.GetLump<WADData::VertexesLump>(WADData::VERTEXES);
-	Lines = SourceWad.GetLump<WADData::LineDefLump>(WADData::LINEDEFS);
-	Things = SourceWad.GetLump<WADData::ThingsLump>(WADData::THINGS);
-	Sectors = SourceWad.GetLump<WADData::SectorsLump>(WADData::SECTORS);
-	Sides = SourceWad.GetLump<WADData::SideDefLump>(WADData::SIDEDEFS);
-	Segs = SourceWad.GetLump<WADData::SegsLump>(WADData::SEGS);
-	Subsectors = SourceWad.GetLump<WADData::SubSectorsLump>(WADData::SSECTORS);
-	Nodes = SourceWad.GetLump<WADData::NodesLump>(WADData::NODES);
+	Verts = LumpDB.GetLump<WADData::VertexesLump>(WADData::VERTEXES);
+	Lines = LumpDB.GetLump<WADData::LineDefLump>(WADData::LINEDEFS);
+	Things = LumpDB.GetLump<WADData::ThingsLump>(WADData::THINGS);
+	Sectors = LumpDB.GetLump<WADData::SectorsLump>(WADData::SECTORS);
+	Sides = LumpDB.GetLump<WADData::SideDefLump>(WADData::SIDEDEFS);
+	Segs = LumpDB.GetLump<WADData::SegsLump>(WADData::SEGS);
+	Subsectors = LumpDB.GetLump<WADData::SubSectorsLump>(WADData::SSECTORS);
+	Nodes = LumpDB.GetLump<WADData::NodesLump>(WADData::NODES);
 
-	GLVerts = SourceWad.GetLump<WADData::GLVertsLump>(WADData::GL_VERT);
-	GLSegs = SourceWad.GetLump<WADData::GLSegsLump>(WADData::GL_SEGS);
-	GLSubSectors = SourceWad.GetLump<WADData::GLSubSectorsLump>(WADData::GL_SSECT);
+	GLVerts = LumpDB.GetLump<WADData::GLVertsLump>(WADData::GL_VERT);
+	GLSegs = LumpDB.GetLump<WADData::GLSegsLump>(WADData::GL_SEGS);
+	GLSubSectors = LumpDB.GetLump<WADData::GLSubSectorsLump>(WADData::GL_SSECT);
 
 	SectorCache.resize(Sectors->Contents.size());
 
 	for (size_t sectorIndex = 0; sectorIndex < Sectors->Contents.size(); sectorIndex++)
 	{
 		auto& sector = SectorCache[sectorIndex];
+		sector.SectorIndex = sectorIndex;
 		sector.Tint = Color{ (uint8_t)GetRandomValue(128,255), (uint8_t)GetRandomValue(128,255) , (uint8_t)GetRandomValue(128,255) , 255 };
 
 		CacheFlat(Sectors->Contents[sectorIndex].FloorTexture);
@@ -253,9 +257,9 @@ Vector2 WADFile::LevelMap::GetVertex(size_t index, bool isGLVert) const
 	return Vector2{ (float)Verts->Contents[index].X, float(Verts->Contents[index].Y) };
 }
 
-void WADFile::LoadLumpData(const WADData::DirectoryEntry& entry)
+void WADFile::LumpDatabase::LoadLumpData(const WADData::DirectoryEntry& entry)
 {
-	if (LumpDB.find(entry.Name) != LumpDB.end())
+	if (Lumps.find(entry.Name) != Lumps.end())
 		return;
 
 	WADData::Lump* lump = WADData::GetLump(entry.Name);
@@ -263,10 +267,10 @@ void WADFile::LoadLumpData(const WADData::DirectoryEntry& entry)
 		return;
 
 	int version = 0;
-	auto glVertsLump = LumpDB.find(WADData::GL_VERT);
-	if (glVertsLump != LumpDB.end())
+	auto glVertsLump = Lumps.find(WADData::GL_VERT);
+	if (glVertsLump != Lumps.end())
 		version = ((WADData::GLVertsLump*)glVertsLump->second)->FormatVersion;
 
-	lump->Parse(BufferData, entry.LumpOffset, entry.LumpSize, version);
-	LumpDB.insert_or_assign(entry.Name, lump);
+	lump->Parse(entry.BufferData, entry.LumpOffset, entry.LumpSize, version);
+	Lumps.insert_or_assign(entry.Name, lump);
 }

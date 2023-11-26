@@ -15,12 +15,14 @@ namespace WADData
         size_t LumpOffset = 0;
         size_t LumpSize = 0;
         std::string Name;
+
+        uint8_t* BufferData = nullptr;
     };
 
     class Lump
     {
     public:
-        virtual void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) = 0;
+        virtual void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) {}
 
         virtual ~Lump() = default;
 
