@@ -48,8 +48,18 @@ namespace WADData
         Contents.resize(count);
         for (size_t i = 0; i < count; i++)
         {
-            memcpy(&Contents[i], data + offset, Thing::ReadSize);
-            offset += Thing::ReadSize;
+            size_t readOffset = offset;
+
+			Contents[i].X = WADReader::ReadInt16(data, readOffset);
+			Contents[i].Y = WADReader::ReadInt16(data, readOffset);
+			Contents[i].BinAngle = WADReader::ReadInt16(data, readOffset);
+			Contents[i].TypeId = WADReader::ReadUInt16(data, readOffset);
+			Contents[i].Flags = WADReader::ReadUInt16(data, readOffset);
+	
+			Contents[i].Position = Vector2{ Contents[i].X * MapScale, Contents[i].Y * MapScale };
+			Contents[i].Angle = float(Contents[i].BinAngle);
+
+			offset += Thing::ReadSize;
         }
     }
 
@@ -195,8 +205,8 @@ namespace WADData
 				int32_t y;
 				memcpy(&y, data + offset + 4, 4);
 
-				Contents[i].X = x / 65536.0f;
-				Contents[i].Y = y / 65536.0f;
+				Contents[i].x = x / 65536.0f;
+				Contents[i].y = y / 65536.0f;
 			}
 			else
 			{
@@ -206,8 +216,8 @@ namespace WADData
 				memcpy(&x, data + offset, 2);
 				memcpy(&y, data + offset + 2, 2);
 
-				Contents[i].X = x;
-				Contents[i].Y = y;
+				Contents[i].x = x;
+				Contents[i].y = y;
 			}
 			
 			offset += readSize;

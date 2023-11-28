@@ -48,6 +48,8 @@ namespace WADData
 
     static constexpr char PLAYPAL[] = "PLAYPAL";
 
+    static constexpr float MapScale = 1.0f / 32.0f;
+
     Lump* GetLump(const std::string& name);
 
     class ThingsLump : public Lump
@@ -62,6 +64,11 @@ namespace WADData
             int16_t BinAngle = 0;
             uint16_t TypeId = 0;
             uint16_t Flags = 0;
+
+            Vector2 Position = { 0,0 };
+            float Angle = 0;
+
+
 
             static constexpr size_t ReadSize = 10;
         };
@@ -78,6 +85,8 @@ namespace WADData
         {
             int16_t X = 0;
             int16_t Y = 0;
+
+            Vector2 Position = { 0 };
             static constexpr size_t ReadSize = 4;
         };
 
@@ -122,6 +131,8 @@ namespace WADData
             std::string LowerTexture;
 			uint16_t SectorId = InvalidSectorIndex;
 
+            Vector2 Offset = { 0 };
+
 			static constexpr size_t ReadSize = 30;
 		};
 
@@ -136,12 +147,16 @@ namespace WADData
 		struct Sector
 		{
 			int16_t FloorHeight = 0;
+           
 			int16_t CeilingHeight = 0;
             std::string FloorTexture;
             std::string CeilingTexture;
 			int16_t LightLevel = 0;
 			uint16_t SpecialType = 0;
 			uint16_t TagNumber = 0;
+
+            float Floor = 0;
+            float Ceiling = 0;
 
 			static constexpr size_t ReadSize = 26;
 		};
@@ -192,6 +207,12 @@ namespace WADData
 
 		struct Node
 		{
+            Vector2 PartitionStart = { 0 };
+            Vector2 PartitionVector = { 0 };
+
+            Rectangle RightBounds = { 0 };
+            Rectangle LeftBounds = { 0 };
+
             int16_t PartitionStartX;
             int16_t PartitionStartY;
 			int16_t PartitionSlopeX;
@@ -213,15 +234,9 @@ namespace WADData
 	public:
 		void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) override;
 
-		struct GlVert
-		{
-            float X;
-            float Y;
-		};
-
         int FormatVersion = 0;
 
-		std::vector<GlVert> Contents;
+		std::vector<Vector2> Contents;
 	};
 
 	class GLSegsLump : public Lump

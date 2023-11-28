@@ -246,13 +246,13 @@ void WADFile::LevelMap::Load()
 		SectorCache[sector].SubSectors.push_back(subSectorId);
 	}
 
-	FindLeafs(Nodes->Contents.size()-1);
+//	FindLeafs(Nodes->Contents.size()-1);
 }
 
 Vector2 WADFile::LevelMap::GetVertex(size_t index, bool isGLVert) const
 {
 	if (isGLVert)
-		return Vector2{ GLVerts->Contents[index].X, GLVerts->Contents[index].Y};
+		return Vector2{ GLVerts->Contents[index].x, GLVerts->Contents[index].y};
 
 	return Vector2{ (float)Verts->Contents[index].X, float(Verts->Contents[index].Y) };
 }
