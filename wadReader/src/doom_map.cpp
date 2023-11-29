@@ -252,9 +252,9 @@ void WADFile::LevelMap::Load()
 Vector2 WADFile::LevelMap::GetVertex(size_t index, bool isGLVert) const
 {
 	if (isGLVert)
-		return Vector2{ GLVerts->Contents[index].x, GLVerts->Contents[index].y};
+		return GLVerts->Contents[index];
 
-	return Vector2{ (float)Verts->Contents[index].X, float(Verts->Contents[index].Y) };
+	return Verts->Contents[index].Position;
 }
 
 void WADFile::LumpDatabase::LoadLumpData(const WADData::DirectoryEntry& entry)

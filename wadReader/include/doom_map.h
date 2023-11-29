@@ -48,7 +48,7 @@ public:
 	virtual void Read(const char* fileName);
 
 
-	WADData::PlayPalLump* PalettesLump = nullptr;;
+	WADData::PlayPalLump* PalettesLump = nullptr;
 
 	class LevelMap
 	{

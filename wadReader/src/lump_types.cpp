@@ -32,11 +32,9 @@ namespace WADData
         if (name == GL_SSECT)
             return new GLSubSectorsLump();
 
-
 		// texture lumps
 		if (name == PLAYPAL)
 			return new PlayPalLump();
-
 
         return nullptr;
     }
@@ -59,6 +57,8 @@ namespace WADData
 			Contents[i].Position = Vector2{ Contents[i].X * MapScale, Contents[i].Y * MapScale };
 			Contents[i].Angle = float(Contents[i].BinAngle);
 
+			ThingsByType[Contents[i].TypeId].push_back(&Contents[i]);
+
 			offset += Thing::ReadSize;
         }
     }
@@ -70,7 +70,12 @@ namespace WADData
         Contents.resize(count);
         for (size_t i = 0; i < count; i++)
         {
-            memcpy(&Contents[i], data + offset, Vertex::ReadSize);
+			size_t readOffset = offset;
+            Contents[i].X = WADReader::ReadInt16(data, readOffset);
+            Contents[i].Y = WADReader::ReadInt16(data, readOffset);
+
+			Contents[i].Position = { Contents[i].X * MapScale, Contents[i].Y * MapScale };
+
             offset += Vertex::ReadSize;
         }
     }

@@ -27,7 +27,7 @@ RenderTexture SectorViewRT;
 WADFile GameWad;
 
 Camera2D MapViewCamera = { 0 };
-constexpr float DefaultZoom = 0.125f;
+constexpr float DefaultZoom = 5.0f;
 
 Camera3D ViewCamera = { 0 };
 
@@ -35,6 +35,17 @@ size_t SelectedSector = 0;
 size_t SelectedSubsector = 0;
 
 bool View3D = false;
+
+void SetCameraToSpawn()
+{
+	if (!Map || !Map->Things || Map->Things->ThingsByType[1].size() == 0)
+		return;
+
+	auto* spawn = *Map->Things->ThingsByType[1].begin();
+	ViewCamera.position = { spawn->Position.x, spawn->Position.y, 1.5f };
+	ViewCamera.target = ViewCamera.position;
+	ViewCamera.target.z += 1;
+}
 
 void ShowLevelInfoWindow()
 {
@@ -106,6 +117,8 @@ void ShowGameInfoWindow()
 
 					if (Map->Verts == nullptr)
 						Map->Load();
+
+					SetCameraToSpawn();
 				}
 			}
 
@@ -129,8 +142,8 @@ void DrawMapView()
 	ClearBackground(BLANK);
 
 	BeginMode2D(MapViewCamera);
-	DrawLine(-25, 0, 100, 0, RED);
-	DrawLine(0, -25, 0, 100, GREEN);
+	DrawLine(-1, 0, 2, 0, RED);
+	DrawLine(0, -1, 0, 2, GREEN);
 
 	DoomRender::DrawMapSegs(*Map, SelectedSector, SelectedSubsector);
 
@@ -148,11 +161,7 @@ void Draw3DView()
 	BeginMode3D(ViewCamera);
 	DrawCube(Vector3Zero(), 1, 1, 1, RED);
 
-	rlPushMatrix();
-
-	rlScalef(0.1f, 0.1f, 0.1f);
 	DoomRender::DrawMap3d(*Map);
-	rlPopMatrix();
 
 	EndMode3D();
 }
@@ -230,6 +239,8 @@ int main ()
 
 	if (Map)
 		Map->Load();
+
+	SetCameraToSpawn();
 
 	SectorViewRT = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
 

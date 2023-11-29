@@ -74,6 +74,9 @@ namespace WADData
         };
 
         std::vector<Thing> Contents;
+
+
+        std::unordered_map<uint16_t, std::vector<Thing*>> ThingsByType;
     };
 
     class VertexesLump : public Lump

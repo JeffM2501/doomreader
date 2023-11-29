@@ -27,7 +27,7 @@ namespace DoomRender
     {
 		for (const auto& thing : map.Things->Contents)
 		{
-			DrawCircle(thing.X, thing.Y, 5, YELLOW);
+			DrawCircleV(thing.Position, 0.25f, YELLOW);
 		}
     }
 
@@ -42,37 +42,33 @@ namespace DoomRender
             {
                 const auto& line = map.Lines->Contents[edge.Line];
 
-                const auto& sp = map.Verts->Contents[line.Start];
-                const auto& ep = map.Verts->Contents[line.End];
+                const auto& sp = map.Verts->Contents[line.Start].Position;
+                const auto& ep = map.Verts->Contents[line.End].Position;
 
                 if (edge.Reverse)
-                    DrawLine(sp.X, sp.Y, ep.X, ep.Y, sector.Tint);
+                    DrawLineEx(sp, ep, 0.125f,  sector.Tint);
                 else
-                    DrawLine(ep.X, ep.Y, sp.X, sp.Y, sector.Tint);
+					DrawLineEx(ep, sp, 0.125f, sector.Tint);
             }
         }
         rlDrawRenderBatchActive();
-        rlSetLineWidth(3);
         if (selectedSector < map.SectorCache.size())
         {
             for (const auto& edge : map.SectorCache[selectedSector].Edges)
             {
 				const auto& line = map.Lines->Contents[edge.Line];
 
-				const auto& sp = map.Verts->Contents[line.Start];
-				const auto& ep = map.Verts->Contents[line.End];
+				const auto& sp = map.Verts->Contents[line.Start].Position;
+				const auto& ep = map.Verts->Contents[line.End].Position;
 
 				if (edge.Reverse)
-					DrawLine(sp.X, sp.Y, ep.X, ep.Y, RED);
+					DrawLineEx(sp, ep, 0.125f, RED);
 				else
-					DrawLine(ep.X, ep.Y, sp.X, sp.Y, RED);
+					DrawLineEx(ep, sp, 0.125f, RED);
             }
 
             rlDrawRenderBatchActive();
         }
-       
-        rlSetLineWidth(1);
-
         DrawThigs(map);
     }
 
@@ -104,14 +100,14 @@ namespace DoomRender
                     Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
 					Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
 
-                    rlTexCoord2f(origin.x/64, origin.y / 64);
+                    rlTexCoord2f(origin.x/2.0f, origin.y / 2.0f);
                     rlVertex2f(origin.x, origin.y);
                     rlVertex2f(origin.x, origin.y);
 
-					rlTexCoord2f(sp.x / 64, sp.y / 64);
+					rlTexCoord2f(sp.x / 2.0f, sp.y / 2.0f);
 					rlVertex2f(sp.x, sp.y);
 
-					rlTexCoord2f(ep.x / 64, ep.y / 64);
+					rlTexCoord2f(ep.x / 2.0f, ep.y / 2.0f);
 					rlVertex2f(ep.x, ep.y);
 				}
             }
@@ -144,7 +140,7 @@ namespace DoomRender
 					Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
 					Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
 
-					DrawLineEx(sp, ep, 5, PURPLE);
+					DrawLineEx(sp, ep, 0.15f, PURPLE);
 				}
 				break;
 			}
@@ -179,15 +175,15 @@ namespace DoomRender
 					Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
 					Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
 
-					rlTexCoord2f(ep.x / 64, ep.y / 64);
-					rlVertex3f(ep.x, ep.y, rawSector.CeilingHeight);
+					rlTexCoord2f(ep.x / 2.0f, ep.y / 2.0f);
+					rlVertex3f(ep.x, ep.y, rawSector.Ceiling);
 
-					rlTexCoord2f(sp.x / 64, sp.y / 64);
-					rlVertex3f(sp.x, sp.y, rawSector.CeilingHeight);
+					rlTexCoord2f(sp.x / 2.0f, sp.y / 2.0f);
+					rlVertex3f(sp.x, sp.y, rawSector.Ceiling);
 
-					rlTexCoord2f(origin.x / 64, origin.y / 64);
-					rlVertex3f(origin.x, origin.y, rawSector.CeilingHeight);
-					rlVertex3f(origin.x, origin.y, rawSector.CeilingHeight);
+					rlTexCoord2f(origin.x / 2.0f, origin.y / 2.0f);
+					rlVertex3f(origin.x, origin.y, rawSector.Ceiling);
+					rlVertex3f(origin.x, origin.y, rawSector.Ceiling);
 				}
 			}
 
@@ -218,15 +214,15 @@ namespace DoomRender
 					Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
 					Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
 
-					rlTexCoord2f(origin.x / 64, origin.y / 64);
-					rlVertex3f(origin.x, origin.y, rawSector.FloorHeight);
-					rlVertex3f(origin.x, origin.y, rawSector.FloorHeight);
+					rlTexCoord2f(origin.x / 2.0f, origin.y / 2.0f);
+					rlVertex3f(origin.x, origin.y, rawSector.Floor);
+					rlVertex3f(origin.x, origin.y, rawSector.Floor);
 
-					rlTexCoord2f(sp.x / 64, sp.y / 64);
-					rlVertex3f(sp.x, sp.y, rawSector.FloorHeight);
+					rlTexCoord2f(sp.x / 2.0f, sp.y / 2.0f);
+					rlVertex3f(sp.x, sp.y, rawSector.Floor);
 
-					rlTexCoord2f(ep.x / 64, ep.y / 64);
-					rlVertex3f(ep.x, ep.y, rawSector.FloorHeight);
+					rlTexCoord2f(ep.x / 2.0f, ep.y / 2.0f);
+					rlVertex3f(ep.x, ep.y, rawSector.Floor);
 				}
 			}
 
