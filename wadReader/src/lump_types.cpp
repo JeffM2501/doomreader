@@ -104,6 +104,9 @@ namespace WADData
             Contents[i].LowerTexture = WADReader::ReadName(data, readOffset);
 
             Contents[i].SectorId = WADReader::ReadInt16(data, readOffset);
+
+			Contents[i].Offset = Vector2{ Contents[i].XOffset * MapScale, Contents[i].XOffset * MapScale };
+
 			offset += SideDef::ReadSize;
 		}
 	}
@@ -128,6 +131,9 @@ namespace WADData
 			Contents[i].LightLevel = WADReader::ReadInt16(data, readOffset);
             Contents[i].SpecialType = WADReader::ReadInt16(data, readOffset);
             Contents[i].TagNumber = WADReader::ReadInt16(data, readOffset);
+
+			Contents[i].Floor = Contents[i].FloorHeight * MapScale;
+			Contents[i].Ceiling = Contents[i].CeilingHeight * MapScale;
 
 			offset += Sector::ReadSize;
 		}
@@ -220,6 +226,9 @@ namespace WADData
 				Contents[i].y = y;
 			}
 			
+			Contents[i].x *= MapScale;
+			Contents[i].y *= MapScale;
+
 			offset += readSize;
 		}
 	}
