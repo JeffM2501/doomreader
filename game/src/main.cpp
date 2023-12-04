@@ -20,6 +20,7 @@ Doom Level Reader Test
 #include "doom_map_render.h"
 #include "lump_inspectors.h"
 #include "reader.h"
+#include "camera_controller.h"
 
 WADFile::LevelMap* Map;
 RenderTexture SectorViewRT;
@@ -30,6 +31,7 @@ Camera2D MapViewCamera = { 0 };
 constexpr float DefaultZoom = 5.0f;
 
 Camera3D ViewCamera = { 0 };
+CameraController Controller;
 
 size_t SelectedSector = 0;
 size_t SelectedSubsector = 0;
@@ -40,11 +42,8 @@ void SetCameraToSpawn()
 {
 	if (!Map || !Map->Things || Map->Things->ThingsByType[1].size() == 0)
 		return;
-
 	auto* spawn = *Map->Things->ThingsByType[1].begin();
-	ViewCamera.position = { spawn->Position.x, spawn->Position.y, 1.5f };
-	ViewCamera.target = ViewCamera.position;
-	ViewCamera.target.z += 1;
+	Controller.SetPosition(Vector3{ spawn->Position.x, spawn->Position.y , 0});
 }
 
 void ShowLevelInfoWindow()
@@ -73,14 +72,17 @@ void ShowLevelInfoWindow()
 		ImGui::TextUnformatted("SubSectors");
 		if (ImGui::BeginListBox("##SubSectors", ImVec2(-FLT_MIN, 5 * ImGui::GetTextLineHeightWithSpacing())))
 		{
-			for (size_t i = 0; i < Map->SectorCache[SelectedSector].SubSectors.size(); i++)
+			if (SelectedSector != size_t(-1))
 			{
-				const char* text = TextFormat("%d", i + 1);
-
-				bool selected = SelectedSubsector == i;
-				if (ImGui::Selectable(text, selected))
+				for (size_t i = 0; i < Map->SectorCache[SelectedSector].SubSectors.size(); i++)
 				{
-					SelectedSubsector = i;
+					const char* text = TextFormat("%d", i + 1);
+
+					bool selected = SelectedSubsector == i;
+					if (ImGui::Selectable(text, selected))
+					{
+						SelectedSubsector = i;
+					}
 				}
 			}
 
@@ -158,7 +160,13 @@ void Draw3DView()
 	if (!Map || !View3D)
 		return;
 
+	Controller.SetCamera(ViewCamera);
+
 	BeginMode3D(ViewCamera);
+	rlPushMatrix();
+	rlRotatef(90, 1, 0, 0);
+	DrawGrid(1000, 10);
+	rlPopMatrix();
 	DrawCube(Vector3Zero(), 1, 1, 1, RED);
 
 	DoomRender::DrawMap3d(*Map);
@@ -168,22 +176,15 @@ void Draw3DView()
 
 void UpdateMapInput()
 {
-	float panSpeed = GetFrameTime() * View3D ? 0.5f : 1000;
-	if (!ImGui::GetIO().WantCaptureKeyboard)
+	if (View3D)
 	{
-		if (View3D)
-		{
-			if (IsKeyDown(KEY_W))
-				CameraMoveForward(&ViewCamera, panSpeed, false);
-			if (IsKeyDown(KEY_S))
-				CameraMoveForward(&ViewCamera, -panSpeed, false);
-
- 			if (IsKeyDown(KEY_E))
-				CameraMoveUp(&ViewCamera, panSpeed);
- 			if (IsKeyDown(KEY_Q))
-				CameraMoveUp(&ViewCamera, -panSpeed);
-		}
-		else
+		if (!ImGui::GetIO().WantCaptureKeyboard && !ImGui::GetIO().WantCaptureMouse)
+			Controller.Update(*Map);
+	}
+	else
+	{
+		float panSpeed = GetFrameTime() * View3D ? 0.5f : 1000;
+		if (!ImGui::GetIO().WantCaptureKeyboard)
 		{
 			if (IsKeyDown(KEY_W))
 				MapViewCamera.target.y -= panSpeed;
@@ -195,16 +196,8 @@ void UpdateMapInput()
 			if (IsKeyDown(KEY_A))
 				MapViewCamera.target.x += panSpeed;
 		}
-	}
 
-	if (!ImGui::GetIO().WantCaptureMouse)
-	{
-		if (View3D && IsMouseButtonDown(MOUSE_RIGHT_BUTTON))
-		{
-			CameraYaw(&ViewCamera, GetMouseDelta().x * 0.001f, false);
-			CameraPitch(&ViewCamera, GetMouseDelta().y * -0.001f, true, false, false);
-		}
-		else
+		if (!ImGui::GetIO().WantCaptureMouse)
 		{
 			float mouseScale = 1.0f / MapViewCamera.zoom;
 			if (IsMouseButtonDown(MOUSE_RIGHT_BUTTON))
@@ -213,6 +206,15 @@ void UpdateMapInput()
 			MapViewCamera.zoom += GetMouseWheelMove() * 0.0625f;
 			if (MapViewCamera.zoom < DefaultZoom)
 				MapViewCamera.zoom = DefaultZoom;
+
+			Vector2 rtMousePos = { GetMousePosition().x, GetScreenHeight() - GetMousePosition().y };
+			Vector2 worldCamera = GetScreenToWorld2D(rtMousePos, MapViewCamera);
+
+			if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
+			{
+				SelectedSector = Map->GetSectorFromPoint(worldCamera.x, worldCamera.y, &SelectedSubsector);
+			}
+
 		}
 	}
 }
@@ -229,8 +231,6 @@ int main ()
 
 	ViewCamera.fovy = 45;
 	ViewCamera.up.z = 1;
-	ViewCamera.position.y = -10;
-	ViewCamera.position.z = 3;
 
 	GameWad.Read("resources/glDOOMWAD.wad");
 
@@ -240,6 +240,7 @@ int main ()
 	if (Map)
 		Map->Load();
 
+	Controller.SetPosition(Vector3{ 0,-2,0 });
 	SetCameraToSpawn();
 
 	SectorViewRT = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());

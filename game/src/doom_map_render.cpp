@@ -176,14 +176,14 @@ namespace DoomRender
 					Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
 
 					rlTexCoord2f(ep.x / 2.0f, ep.y / 2.0f);
-					rlVertex3f(ep.x, ep.y, rawSector.Ceiling);
+					rlVertex3f(ep.x, ep.y, rawSector.Floor);
 
 					rlTexCoord2f(sp.x / 2.0f, sp.y / 2.0f);
-					rlVertex3f(sp.x, sp.y, rawSector.Ceiling);
+					rlVertex3f(sp.x, sp.y, rawSector.Floor);
 
 					rlTexCoord2f(origin.x / 2.0f, origin.y / 2.0f);
-					rlVertex3f(origin.x, origin.y, rawSector.Ceiling);
-					rlVertex3f(origin.x, origin.y, rawSector.Ceiling);
+					rlVertex3f(origin.x, origin.y, rawSector.Floor);
+					rlVertex3f(origin.x, origin.y, rawSector.Floor);
 				}
 			}
 
@@ -215,14 +215,14 @@ namespace DoomRender
 					Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
 
 					rlTexCoord2f(origin.x / 2.0f, origin.y / 2.0f);
-					rlVertex3f(origin.x, origin.y, rawSector.Floor);
-					rlVertex3f(origin.x, origin.y, rawSector.Floor);
+					rlVertex3f(origin.x, origin.y, rawSector.Ceiling);
+					rlVertex3f(origin.x, origin.y, rawSector.Ceiling);
 
 					rlTexCoord2f(sp.x / 2.0f, sp.y / 2.0f);
-					rlVertex3f(sp.x, sp.y, rawSector.Floor);
+					rlVertex3f(sp.x, sp.y, rawSector.Ceiling);
 
 					rlTexCoord2f(ep.x / 2.0f, ep.y / 2.0f);
-					rlVertex3f(ep.x, ep.y, rawSector.Floor);
+					rlVertex3f(ep.x, ep.y, rawSector.Ceiling);
 				}
 			}
 
@@ -230,6 +230,34 @@ namespace DoomRender
 
 			rlDrawRenderBatchActive();
 			rlSetTexture(0);
+		}
+
+		for (const auto& thing : map.Things->Contents)
+		{
+			float floor = 0;
+			if (thing.SectorId != size_t(-1))
+				floor = map.Sectors->Contents[thing.SectorId].Floor;
+			DrawSphere(Vector3{ thing.Position.x, thing.Position.y, floor }, 0.25f, YELLOW);
+		}
+
+		for (const auto& sector : map.SectorCache)
+		{
+			for (const auto& edge : sector.Edges)
+			{
+				const auto& line = map.Lines->Contents[edge.Line];
+
+				const auto& sp = map.Verts->Contents[line.Start].Position;
+				const auto& ep = map.Verts->Contents[line.End].Position;
+
+				DrawLine3D(Vector3{sp.x,sp.y,map.Sectors->Contents[sector.SectorIndex].Floor},
+					Vector3{ ep.x,ep.y,map.Sectors->Contents[sector.SectorIndex].Floor },
+					sector.Tint);
+
+				DrawLine3D(Vector3{ sp.x,sp.y,map.Sectors->Contents[sector.SectorIndex].Ceiling },
+					Vector3{ ep.x,ep.y,map.Sectors->Contents[sector.SectorIndex].Ceiling },
+					ColorAlpha(sector.Tint, 0.75f));
+	
+			}
 		}
 	}
 

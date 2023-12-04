@@ -106,6 +106,8 @@ public:
 
 		Vector2 GetVertex(size_t index, bool isGLVert) const;
 
+		size_t GetSectorFromPoint(float x, float y, size_t* subSector = nullptr) const;
+
 	protected:
 		void FindLeafs(size_t node);
 
@@ -115,4 +117,5 @@ public:
 	std::vector<LevelMap> Levels;
 
 	std::unordered_map<std::string, Image> Flats;
+
 };

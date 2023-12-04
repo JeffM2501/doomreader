@@ -106,6 +106,39 @@ void WADFile::Read(const char* fileName)
 	}
 }
 
+size_t WADFile::LevelMap::GetSectorFromPoint(float x, float y, size_t* outSubSector) const
+{
+	Vector2 point = { x,y };
+
+	for (const auto& sector : SectorCache)
+	{
+		size_t subSectorIndex = 0;
+
+		for (size_t subSectorID : sector.SubSectors)
+		{
+			const auto& subSector = GLSubSectors->Contents[subSectorID];
+			std::vector<Vector2> polygon;
+
+			polygon.resize(subSector.Count);
+			for (size_t i = 0; i < subSector.Count; i++)
+			{
+				polygon[i] = (GetVertex(GLSegs->Contents[i + subSector.StartSegment].End, GLSegs->Contents[i + subSector.StartSegment].EndIsGL));
+			}
+			
+			if (CheckCollisionPointPoly(point, &polygon[0], int(polygon.size())))
+			{
+				if (outSubSector)
+					*outSubSector = subSectorIndex;
+				return sector.SectorIndex;
+			}
+
+			subSectorIndex++;
+		}
+	}
+
+	return size_t(-1);
+}
+
 void WADFile::LevelMap::FindLeafs(size_t nodeId)
 {
 	const auto& node = Nodes->Contents[nodeId];
@@ -246,6 +279,10 @@ void WADFile::LevelMap::Load()
 		SectorCache[sector].SubSectors.push_back(subSectorId);
 	}
 
+	for (auto& thing : Things->Contents)
+	{
+		thing.SectorId = GetSectorFromPoint(thing.Position.x, thing.Position.y);
+	}
 //	FindLeafs(Nodes->Contents.size()-1);
 }
 

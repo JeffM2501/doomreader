@@ -68,7 +68,7 @@ namespace WADData
             Vector2 Position = { 0,0 };
             float Angle = 0;
 
-
+            size_t SectorId = size_t(-1);
 
             static constexpr size_t ReadSize = 10;
         };
