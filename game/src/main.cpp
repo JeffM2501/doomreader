@@ -231,7 +231,11 @@ void UpdateMapInput()
 			if (IsMouseButtonDown(MOUSE_RIGHT_BUTTON))
 				MapViewCamera.target = Vector2Add(MapViewCamera.target, Vector2{ GetMouseDelta().x * -mouseScale, GetMouseDelta().y * mouseScale });
 
-			MapViewCamera.zoom += GetMouseWheelMove() * 0.0625f;
+			float wheelScrollFactor = 0.0625f;
+			if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT))
+				wheelScrollFactor *= 10;
+
+			MapViewCamera.zoom += GetMouseWheelMove() * wheelScrollFactor;
 			if (MapViewCamera.zoom < DefaultZoom)
 				MapViewCamera.zoom = DefaultZoom;
 

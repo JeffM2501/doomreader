@@ -36,6 +36,13 @@ namespace WADData
 		if (name == PLAYPAL)
 			return new PlayPalLump();
 
+		if (name == PNAMES)
+			return new PatchNamesLump();
+		if (name == TEXTURE1)
+			return new TexturesLump();
+		if (name == TEXTURE2)
+			return new TexturesLump();
+
         return nullptr;
     }
 
@@ -391,6 +398,52 @@ namespace WADData
 			}
 
 			offset += Palette::ReadSize;
+		}
+	}
+
+	void PatchNamesLump::Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion /*= 0*/)
+	{
+		size_t readOffset = offset;
+
+		uint32_t patchCount = WADReader::ReadUInt(data, readOffset);
+
+		for (uint32_t i = 0; i < patchCount; i++)
+		{
+			Contents.push_back(WADReader::ReadName(data, readOffset));
+		}
+	}
+
+	void TexturesLump::Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion /*= 0*/)
+	{
+		size_t readOffset = offset;
+
+		uint32_t count = WADReader::ReadUInt(data, readOffset);
+		
+		for (uint32_t textureIndex = 0; textureIndex < count; textureIndex++)
+		{
+			size_t textureOffset = WADReader::ReadUInt(data, readOffset) + offset;
+
+			TextureDef texture;
+			texture.Name = WADReader::ReadName(data, textureOffset);
+			texture.Masked = WADReader::ReadUInt(data, textureOffset);
+			texture.Width = WADReader::ReadUInt16(data, textureOffset);
+			texture.Height = WADReader::ReadUInt16(data, textureOffset);
+
+			uint16_t patchCount = WADReader::ReadUInt16(data, textureOffset);
+
+			for (uint16_t patchIndex = 0; patchIndex < patchCount; patchIndex++)
+			{
+				PatchInfo patch;
+				patch.OriginX = WADReader::ReadInt16(data, textureOffset);
+				patch.OriginY = WADReader::ReadInt16(data, textureOffset);
+
+				patch.PatchId = WADReader::ReadUInt16(data, textureOffset);
+				patch.stepdir = WADReader::ReadUInt16(data, textureOffset);
+				patch.colormap = WADReader::ReadUInt16(data, textureOffset);
+				texture.Patches.push_back(patch);
+			}
+
+			Contents[texture.Name] = texture;
 		}
 	}
 

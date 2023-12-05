@@ -60,6 +60,10 @@ public:
 		std::unordered_map<std::string, WADData::DirectoryEntry> Entries;
 		LumpDatabase LumpDB;
 		
+		WADData::PatchNamesLump* PatchNames = nullptr;
+
+		std::vector<WADData::TexturesLump*> Textures;
+
 		WADData::VertexesLump* Verts = nullptr;
 		WADData::LineDefLump* Lines = nullptr;
 		WADData::ThingsLump* Things = nullptr;
@@ -112,10 +116,13 @@ public:
 		void FindLeafs(size_t node);
 
 		void CacheFlat(const std::string& flatName);
+		void CacheTexture(const std::string& flatName);
 	};
 
 	std::vector<LevelMap> Levels;
 
 	std::unordered_map<std::string, Image> Flats;
+
+	std::unordered_map<std::string, Image> Textures;
 
 };

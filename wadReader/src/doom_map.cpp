@@ -189,11 +189,17 @@ void WADFile::LevelMap::CacheFlat(const std::string& flatName)
 
 			Color imageColr = SourceWad.PalettesLump->Contents[0].Entry[index];
 
-			ImageDrawPixel(&flatImage, x, 64-y, imageColr);
+			ImageDrawPixel(&flatImage, x, 63-y, imageColr);
 		}
 	}
 	
 	SourceWad.Flats[flatName] = flatImage;
+}
+
+void WADFile::LevelMap::CacheTexture(const std::string& textureName)
+{
+	if (SourceWad.Textures.find(textureName) != SourceWad.Flats.end())
+		return;
 }
 
 void WADFile::LevelMap::Load()
@@ -217,6 +223,10 @@ void WADFile::LevelMap::Load()
 	GLSegs = LumpDB.GetLump<WADData::GLSegsLump>(WADData::GL_SEGS);
 	GLSubSectors = LumpDB.GetLump<WADData::GLSubSectorsLump>(WADData::GL_SSECT);
 
+	PatchNames = LumpDB.GetLump<WADData::PatchNamesLump>(WADData::PNAMES);
+	Textures.push_back(LumpDB.GetLump<WADData::TexturesLump>(WADData::TEXTURE1));
+	Textures.push_back(LumpDB.GetLump<WADData::TexturesLump>(WADData::TEXTURE2));
+
 	SectorCache.resize(Sectors->Contents.size());
 
 	for (size_t sectorIndex = 0; sectorIndex < Sectors->Contents.size(); sectorIndex++)
@@ -227,6 +237,13 @@ void WADFile::LevelMap::Load()
 
 		CacheFlat(Sectors->Contents[sectorIndex].FloorTexture);
 		CacheFlat(Sectors->Contents[sectorIndex].CeilingTexture);
+	}
+
+	for (const auto& side : Sides->Contents)
+	{
+		CacheTexture(side.LowerTexture);
+		CacheTexture(side.MidTexture);
+		CacheTexture(side.TopTexture);
 	}
 
 	// cache the edges in a sector
@@ -244,7 +261,8 @@ void WADFile::LevelMap::Load()
 			edge.Reverse = false;
 
 			edge.Side = line.FrontSideDef;
-			edge.Destination = line.BackSideDef;
+			if (line.BackSideDef != WADData::InvalidSideDefIndex)
+				edge.Destination = Sides->Contents[line.BackSideDef].SectorId;
 
 			SectorCache[side.SectorId].Edges.push_back(edge);
 		}
@@ -259,7 +277,9 @@ void WADFile::LevelMap::Load()
 			edge.Reverse = true;
 
 			edge.Side = line.BackSideDef;
-			edge.Destination = line.FrontSideDef;
+
+			if (line.FrontSideDef != WADData::InvalidSideDefIndex)
+				edge.Destination = Sides->Contents[line.FrontSideDef].SectorId;
 
 			SectorCache[side.SectorId].Edges.push_back(edge);
 		}

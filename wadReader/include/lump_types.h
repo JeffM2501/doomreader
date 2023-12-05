@@ -48,6 +48,10 @@ namespace WADData
 
     static constexpr char PLAYPAL[] = "PLAYPAL";
 
+    static constexpr char PNAMES[] = "PNAMES";
+    static constexpr char TEXTURE1[] = "TEXTURE1";
+    static constexpr char TEXTURE2[] = "TEXTURE2";
+
     static constexpr float MapScale = 1.0f / 32.0f;
 
     Lump* GetLump(const std::string& name);
@@ -295,5 +299,47 @@ namespace WADData
 
 		std::unordered_map<size_t, Palette> Contents;
     };
+
+	class PatchNamesLump : public Lump
+	{
+	public:
+		void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) override;
+
+		std::vector<std::string> Contents;
+	};
+
+    class TexturesLump : public Lump
+	{
+	public:
+		void Parse(uint8_t* data, size_t offset, size_t size, int glVertsVersion = 0) override;
+
+        struct PatchInfo
+        {
+            int16_t OriginX = 0;
+            int16_t OriginY = 0;
+            uint16_t PatchId = 0;
+
+            uint16_t stepdir = 0;
+            uint16_t colormap = 0;
+
+            static constexpr size_t ReadSize = 10;
+        };
+
+		struct TextureDef
+		{
+            std::string Name;
+            uint32_t Masked = 9;
+            uint16_t Width = 0;
+            uint16_t Height = 0;
+            uint32_t Ingored1 = 0;
+            uint16_t PatchCount = 0;
+
+            std::vector<PatchInfo> Patches;
+
+			static constexpr size_t ReadSize = 16;
+		};
+
+		std::unordered_map<std::string, TextureDef> Contents;
+	};
 
 }

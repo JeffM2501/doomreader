@@ -268,26 +268,53 @@ namespace DoomRender
 				auto sp = map.Verts->Contents[line.Start].Position;
 				auto ep = map.Verts->Contents[line.End].Position;
 
-				if (false && edge.Reverse)
+				float floor = map.Sectors->Contents[sector.SectorIndex].Floor;
+				float ceiling = map.Sectors->Contents[sector.SectorIndex].Ceiling;
+
+				if (edge.Reverse)
 				{
 					auto t = ep;
 					ep = sp;
 					sp = ep;
 				}
 
-				if (edge.Destination != WADData::InvalidSideDefIndex)
+				if (edge.Destination < 65000)
 				{
+					// it's a partial wall
+
+					const auto& destinationSector = map.Sectors->Contents[edge.Destination];
+
+					float destFloor = destinationSector.Floor;
+					float destCeling = destinationSector.Ceiling;
+
+					if (floor < destFloor)
+					{
+						// we have a step up
+
+						rlColor4ub(sector.Tint.r, sector.Tint.g, sector.Tint.b, sector.Tint.a);
+						rlVertex3f(sp.x, sp.y, floor);
+						rlVertex3f(ep.x, ep.y, floor);
+						rlVertex3f(ep.x, ep.y, destFloor);
+						rlVertex3f(sp.x, sp.y, destFloor);
+
+					}
+
+					if (destCeling < ceiling)
+					{
+						// we need to draw a roof stepdown
+
+
+						rlColor4ub(sector.Tint.r, sector.Tint.g, sector.Tint.b, sector.Tint.a);
+						rlVertex3f(sp.x, sp.y, destCeling);
+						rlVertex3f(ep.x, ep.y, destCeling);
+						rlVertex3f(ep.x, ep.y, ceiling);
+						rlVertex3f(sp.x, sp.y, ceiling);
+					}
+
 				}
 				else // it's a full wall
 				{
-					float floor = map.Sectors->Contents[sector.SectorIndex].Floor;
-					float ceiling = map.Sectors->Contents[sector.SectorIndex].Ceiling;
-
-					uint8_t alpha = 1;
-					if (edge.Destination != WADData::InvalidSideDefIndex)
-						alpha = 64;
-
-					rlColor4ub(sector.Tint.r, sector.Tint.g, sector.Tint.b, alpha);
+					rlColor4ub(sector.Tint.r, sector.Tint.g, sector.Tint.b, sector.Tint.a);
 					rlVertex3f(sp.x, sp.y, floor);
 					rlVertex3f(ep.x, ep.y, floor);
 					rlVertex3f(ep.x, ep.y, ceiling);

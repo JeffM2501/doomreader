@@ -70,7 +70,7 @@ void VisualizeLineDefs(WADData::LineDefLump* lineDefs, WADFile::LevelMap* map)
 
             ImGui::Text("SP %d, EP %d", line.Start, line.End);
             ImGui::Text("Front %d, Back %d", line.FrontSideDef, line.BackSideDef);
-            ImGui::Text("Flats %d, Type %d, SectorTag", line.Flags, line.SpecialType, line.SectorTag);
+            ImGui::Text("Flags %d, Type %d, SectorTag", line.Flags, line.SpecialType, line.SectorTag);
         }
     }
 }
@@ -94,22 +94,43 @@ void VisualizeSideDefs(WADData::SideDefLump* sideDefs, WADFile::LevelMap* map)
     }
 }
 
+
+static int CurrentSector = -1;
 void VisualizeSectors(WADData::SectorsLump* sectorDefs, WADFile::LevelMap* map)
 {
-	ImGui::TextUnformatted("Side Definitions");
-	if (ImGui::BeginListBox("##SideDefs", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
+	ImGui::TextUnformatted("Sectors Definitions");
+	if (ImGui::BeginListBox("##Sectors", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
 	{
 		int count = 0;
 		for (const auto& sector : sectorDefs->Contents)
 		{
+            bool selected = CurrentSector == count;
 			const char* text = TextFormat("S %d, F %d C %d FT %s CT %s###Sector%d", count, sector.FloorHeight, sector.CeilingHeight, sector.FloorTexture.c_str(), sector.CeilingTexture.c_str(), count);
-			if (ImGui::Selectable(text))
+			if (ImGui::Selectable(text, selected))
 			{
+                CurrentSector = count;
 			}
 			count++;
 		}
 
 		ImGui::EndListBox();
+	}
+
+	if (CurrentSector >= 0)
+	{
+		const auto& sector = map->SectorCache[CurrentSector];
+        int count = 0;
+        for (auto& edge : sector.Edges)
+        {
+            const auto& line = map->Lines->Contents[edge.Line];
+
+			ImGui::Text("Edge %d SP %d, EP %d, Dest %d", count, line.Start, line.End, edge.Destination);
+			ImGui::Text("        Front %d, Back %d", line.FrontSideDef, line.BackSideDef);
+            ImGui::Separator();
+
+            count++;
+        }
+		
 	}
 }
 
