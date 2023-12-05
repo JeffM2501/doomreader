@@ -87,7 +87,16 @@ namespace WADData
         Contents.resize(count);
         for (size_t i = 0; i < count; i++)
         {
-            memcpy(&Contents[i], data + offset, LineDef::ReadSize);
+			size_t readOffset = offset;
+
+            Contents[i].Start = WADReader::ReadUInt16(data, readOffset);
+            Contents[i].End = WADReader::ReadUInt16(data, readOffset);
+            Contents[i].Flags = WADReader::ReadUInt16(data, readOffset);
+            Contents[i].SpecialType = WADReader::ReadUInt16(data, readOffset);
+            Contents[i].SectorTag = WADReader::ReadUInt16(data, readOffset);
+            Contents[i].FrontSideDef = WADReader::ReadUInt16(data, readOffset);
+            Contents[i].BackSideDef = WADReader::ReadUInt16(data, readOffset);
+
             offset += LineDef::ReadSize;
         }
     }
@@ -279,7 +288,7 @@ namespace WADData
 				seg.Start = WADReader::ReadUInt(data, readOffset);
 				if (uint32_t(seg.Start) & 1 << glOffset)
 				{
-					seg.SartIsGL = true;
+					seg.StartIsGL = true;
 					seg.Start &= ~(1 << glOffset);
 				}
 
@@ -299,7 +308,7 @@ namespace WADData
 				seg.Start = WADReader::ReadUInt16(data, readOffset);
 				if (seg.Start & 1 << 15)
 				{
-					seg.SartIsGL = true;
+					seg.StartIsGL = true;
 					seg.Start &= ~(1 << 15);
 				}
 

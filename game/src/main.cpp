@@ -92,6 +92,23 @@ void ShowLevelInfoWindow()
     ImGui::End();
 }
 
+void LoadMap()
+{
+    SelectedSector = 0;
+    SelectedSubsector = 0;
+
+    if (Map->Verts == nullptr)
+        Map->Load();
+
+    SetupLumpInspector(WADData::THINGS, Map->Things);
+    SetupLumpInspector(WADData::SSECTORS, Map->Subsectors);
+    SetupLumpInspector(WADData::LINEDEFS, Map->Lines);
+    SetupLumpInspector(WADData::SIDEDEFS, Map->Sides);
+    SetupLumpInspector(WADData::SECTORS, Map->Sectors);
+
+    SetCameraToSpawn();
+}
+
 void ShowGameInfoWindow()
 {
     if (ImGui::Begin("Game WAD"))
@@ -114,21 +131,38 @@ void ShowGameInfoWindow()
 				if (ImGui::Selectable(level.Name.c_str(), selected))
 				{
 					Map = &level;
-					SelectedSector = 0;
-					SelectedSubsector = 0;
-
-					if (Map->Verts == nullptr)
-						Map->Load();
-
-					SetCameraToSpawn();
+					LoadMap();
 				}
 			}
 
 			ImGui::EndListBox();
 		}
+    }
+    ImGui::End();
+}
 
-		ImGui::TextUnformatted("View Mode");
-		
+void ShowMapLumpInspector()
+{
+    if (ImGui::Begin("Map Lumps") && Map)
+    {
+        if (Map->Sectors)
+        {
+            ImGui::TextUnformatted("Sectors");
+            Map->Sectors->Visualize(Map->Sectors, Map);
+        }
+
+
+		if (Map->Lines)
+		{
+			ImGui::TextUnformatted("LineDefs");
+			Map->Lines->Visualize(Map->Lines, Map);
+		}
+
+		if (Map->Sides)
+		{
+			ImGui::TextUnformatted("SideDefs");
+			Map->Sides->Visualize(Map->Sides, Map);
+		}
     }
     ImGui::End();
 }
@@ -163,14 +197,8 @@ void Draw3DView()
 	Controller.SetCamera(ViewCamera);
 
 	BeginMode3D(ViewCamera);
-	rlPushMatrix();
-	rlRotatef(90, 1, 0, 0);
-	DrawGrid(1000, 10);
-	rlPopMatrix();
 	DrawCube(Vector3Zero(), 1, 1, 1, RED);
-
 	DoomRender::DrawMap3d(*Map);
-
 	EndMode3D();
 }
 
@@ -231,16 +259,15 @@ int main ()
 
 	ViewCamera.fovy = 45;
 	ViewCamera.up.z = 1;
-
+	Controller.SetPosition(Vector3{ 0,-2,0 });
+	
 	GameWad.Read("resources/glDOOMWAD.wad");
 
 	if (GameWad.Levels.size() > 0)
 		Map = &GameWad.Levels[0];
 
-	if (Map)
-		Map->Load();
+	LoadMap();
 
-	Controller.SetPosition(Vector3{ 0,-2,0 });
 	SetCameraToSpawn();
 
 	SectorViewRT = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
@@ -267,6 +294,7 @@ int main ()
 
 		ShowLevelInfoWindow();
 		ShowGameInfoWindow();
+		ShowMapLumpInspector();
 	//	ImGui::ShowDemoWindow();
 
 		rlImGuiEnd();

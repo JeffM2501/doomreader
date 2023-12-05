@@ -117,21 +117,22 @@ size_t WADFile::LevelMap::GetSectorFromPoint(float x, float y, size_t* outSubSec
 		for (size_t subSectorID : sector.SubSectors)
 		{
 			const auto& subSector = GLSubSectors->Contents[subSectorID];
-			std::vector<Vector2> polygon;
 
-			polygon.resize(subSector.Count);
-			for (size_t i = 0; i < subSector.Count; i++)
-			{
-				polygon[i] = (GetVertex(GLSegs->Contents[i + subSector.StartSegment].End, GLSegs->Contents[i + subSector.StartSegment].EndIsGL));
-			}
-			
-			if (CheckCollisionPointPoly(point, &polygon[0], int(polygon.size())))
-			{
-				if (outSubSector)
-					*outSubSector = subSectorIndex;
-				return sector.SectorIndex;
-			}
+			Vector2 origin = GetVertex(GLSegs->Contents[subSector.StartSegment].End, GLSegs->Contents[subSector.StartSegment].EndIsGL);
 
+			for (size_t i = 1; i < subSector.Count; i++)
+			{
+				Vector2 sp = GetVertex(GLSegs->Contents[i + subSector.StartSegment].Start, GLSegs->Contents[i + subSector.StartSegment].StartIsGL);
+				Vector2 ep = GetVertex(GLSegs->Contents[i + subSector.StartSegment].End, GLSegs->Contents[i + subSector.StartSegment].EndIsGL);
+
+				if (CheckCollisionPointTriangle(point, origin, sp, ep))
+				{
+                    if (outSubSector)
+                        *outSubSector = subSectorIndex;
+                    return sector.SectorIndex;
+				}
+			}
+		
 			subSectorIndex++;
 		}
 	}

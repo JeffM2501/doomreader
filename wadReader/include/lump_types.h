@@ -26,7 +26,7 @@ namespace WADData
 
         virtual ~Lump() = default;
 
-        std::function<void(Lump*)> Visualize = nullptr;
+        std::function<void(Lump*, void*)> Visualize = nullptr;
     };
 
     static constexpr char THINGS[]      = "THINGS";
@@ -110,7 +110,7 @@ namespace WADData
             uint16_t End = 0;
             uint16_t Flags = 0;
             uint16_t SpecialType = 0;
-            uint16_t Sector = InvalidSectorIndex;
+            uint16_t SectorTag = InvalidSectorIndex;
             uint16_t FrontSideDef = InvalidSideDefIndex;
             uint16_t BackSideDef = InvalidSideDefIndex;
 
@@ -250,7 +250,7 @@ namespace WADData
         struct GLSeg
         {
 			size_t Start = 0;
-            bool SartIsGL = false;
+            bool StartIsGL = false;
 			size_t End = 0;
             bool EndIsGL = false;
 

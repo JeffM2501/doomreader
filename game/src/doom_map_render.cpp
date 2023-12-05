@@ -45,10 +45,26 @@ namespace DoomRender
                 const auto& sp = map.Verts->Contents[line.Start].Position;
                 const auto& ep = map.Verts->Contents[line.End].Position;
 
+				Color c = WHITE;
+				if (edge.Reverse)
+				{
+					if (edge.Destination != WADData::InvalidSectorIndex)
+						c = BLUE;
+					else
+						c = DARKBLUE;
+				}
+				else
+				{
+                    if (edge.Destination != WADData::InvalidSectorIndex)
+                        c = GREEN;
+                    else
+                        c = DARKGREEN;
+				}
+
                 if (edge.Reverse)
-                    DrawLineEx(sp, ep, 0.125f,  sector.Tint);
+                    DrawLineEx(sp, ep, 0.125f,  c);
                 else
-					DrawLineEx(ep, sp, 0.125f, sector.Tint);
+					DrawLineEx(ep, sp, 0.125f, c);
             }
         }
         rlDrawRenderBatchActive();
@@ -91,13 +107,13 @@ namespace DoomRender
                 float lightLevel = rawSector.LightLevel / 255.0f;
                 rlColor4f(lightLevel, lightLevel, lightLevel, 1);
 
-                Vector2 origin = map.GetVertex(map.GLSegs->Contents[glSubSector.StartSegment].Start, map.GLSegs->Contents[glSubSector.StartSegment].SartIsGL);
+                Vector2 origin = map.GetVertex(map.GLSegs->Contents[glSubSector.StartSegment].Start, map.GLSegs->Contents[glSubSector.StartSegment].StartIsGL);
 
 				for (size_t index = glSubSector.StartSegment+1; index < glSubSector.StartSegment + glSubSector.Count; index++)
 				{
 					const auto& segment = map.GLSegs->Contents[index];
 
-                    Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
+                    Vector2 sp = map.GetVertex(segment.Start, segment.StartIsGL);
 					Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
 
                     rlTexCoord2f(origin.x/2.0f, origin.y / 2.0f);
@@ -137,7 +153,7 @@ namespace DoomRender
 				{
 					const auto& segment = map.GLSegs->Contents[index];
 
-					Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
+					Vector2 sp = map.GetVertex(segment.Start, segment.StartIsGL);
 					Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
 
 					DrawLineEx(sp, ep, 0.15f, PURPLE);
@@ -166,13 +182,13 @@ namespace DoomRender
 				float lightLevel = (rawSector.LightLevel / 255.0f) * 0.75f;
 				rlColor4f(lightLevel, lightLevel, lightLevel, 1);
 
-				Vector2 origin = map.GetVertex(map.GLSegs->Contents[glSubSector.StartSegment].Start, map.GLSegs->Contents[glSubSector.StartSegment].SartIsGL);
+				Vector2 origin = map.GetVertex(map.GLSegs->Contents[glSubSector.StartSegment].Start, map.GLSegs->Contents[glSubSector.StartSegment].StartIsGL);
 
 				for (size_t index = glSubSector.StartSegment + 1; index < glSubSector.StartSegment + glSubSector.Count; index++)
 				{
 					const auto& segment = map.GLSegs->Contents[index];
 
-					Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
+					Vector2 sp = map.GetVertex(segment.Start, segment.StartIsGL);
 					Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
 
 					rlTexCoord2f(ep.x / 2.0f, ep.y / 2.0f);
@@ -205,13 +221,13 @@ namespace DoomRender
 				float lightLevel = rawSector.LightLevel / 255.0f;
 				rlColor4f(lightLevel, lightLevel, lightLevel, 1);
 
-				Vector2 origin = map.GetVertex(map.GLSegs->Contents[glSubSector.StartSegment].Start, map.GLSegs->Contents[glSubSector.StartSegment].SartIsGL);
+				Vector2 origin = map.GetVertex(map.GLSegs->Contents[glSubSector.StartSegment].Start, map.GLSegs->Contents[glSubSector.StartSegment].StartIsGL);
 
 				for (size_t index = glSubSector.StartSegment + 1; index < glSubSector.StartSegment + glSubSector.Count; index++)
 				{
 					const auto& segment = map.GLSegs->Contents[index];
 
-					Vector2 sp = map.GetVertex(segment.Start, segment.SartIsGL);
+					Vector2 sp = map.GetVertex(segment.Start, segment.StartIsGL);
 					Vector2 ep = map.GetVertex(segment.End, segment.EndIsGL);
 
 					rlTexCoord2f(origin.x / 2.0f, origin.y / 2.0f);
@@ -237,28 +253,50 @@ namespace DoomRender
 			float floor = 0;
 			if (thing.SectorId != size_t(-1))
 				floor = map.Sectors->Contents[thing.SectorId].Floor;
-			DrawSphere(Vector3{ thing.Position.x, thing.Position.y, floor }, 0.25f, YELLOW);
+			DrawSphere(Vector3{ thing.Position.x, thing.Position.y, floor + 0.5f }, 0.125f, ColorAlpha(YELLOW, 0.25f));
 		}
 
+		rlSetTexture(0);
+		rlBegin(RL_QUADS);
+		
 		for (const auto& sector : map.SectorCache)
 		{
 			for (const auto& edge : sector.Edges)
 			{
 				const auto& line = map.Lines->Contents[edge.Line];
 
-				const auto& sp = map.Verts->Contents[line.Start].Position;
-				const auto& ep = map.Verts->Contents[line.End].Position;
+				auto sp = map.Verts->Contents[line.Start].Position;
+				auto ep = map.Verts->Contents[line.End].Position;
 
-				DrawLine3D(Vector3{sp.x,sp.y,map.Sectors->Contents[sector.SectorIndex].Floor},
-					Vector3{ ep.x,ep.y,map.Sectors->Contents[sector.SectorIndex].Floor },
-					sector.Tint);
+				if (false && edge.Reverse)
+				{
+					auto t = ep;
+					ep = sp;
+					sp = ep;
+				}
 
-				DrawLine3D(Vector3{ sp.x,sp.y,map.Sectors->Contents[sector.SectorIndex].Ceiling },
-					Vector3{ ep.x,ep.y,map.Sectors->Contents[sector.SectorIndex].Ceiling },
-					ColorAlpha(sector.Tint, 0.75f));
+				if (edge.Destination != WADData::InvalidSideDefIndex)
+				{
+				}
+				else // it's a full wall
+				{
+					float floor = map.Sectors->Contents[sector.SectorIndex].Floor;
+					float ceiling = map.Sectors->Contents[sector.SectorIndex].Ceiling;
+
+					uint8_t alpha = 1;
+					if (edge.Destination != WADData::InvalidSideDefIndex)
+						alpha = 64;
+
+					rlColor4ub(sector.Tint.r, sector.Tint.g, sector.Tint.b, alpha);
+					rlVertex3f(sp.x, sp.y, floor);
+					rlVertex3f(ep.x, ep.y, floor);
+					rlVertex3f(ep.x, ep.y, ceiling);
+					rlVertex3f(sp.x, sp.y, ceiling);
+				}
 	
 			}
 		}
+		rlEnd();
 	}
 
 }
