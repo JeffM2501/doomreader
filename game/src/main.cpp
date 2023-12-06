@@ -291,8 +291,8 @@ int main ()
 		BeginDrawing();
 		ClearBackground(BLACK);
 
-		DrawMapView();
 		Draw3DView();
+		DrawMapView();
 
 		rlImGuiBegin();
 

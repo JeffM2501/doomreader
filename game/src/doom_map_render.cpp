@@ -7,6 +7,7 @@
 namespace DoomRender
 {
     std::unordered_map<std::string, Texture2D> FlatCache;
+	std::unordered_map<std::string, Texture2D> TextureCache;
 
     Texture2D GetFlat(const std::string& name, const WADFile& wad)
     {
@@ -22,6 +23,21 @@ namespace DoomRender
         FlatCache[name] = texture;
         return texture;
     }
+
+	Texture2D GetTexture(const std::string& name, const WADFile& wad)
+	{
+		auto itr = TextureCache.find(name);
+		if (itr != TextureCache.end())
+			return itr->second;
+
+		auto imageItr = wad.Textures.find(name);
+		if (imageItr == wad.Textures.end())
+			return Texture2D{ 0 };
+
+		Texture2D texture = LoadTextureFromImage(imageItr->second);
+		TextureCache[name] = texture;
+		return texture;
+	}
 
     void DrawThigs(const WADFile::LevelMap& map)
     {
@@ -256,8 +272,6 @@ namespace DoomRender
 			DrawSphere(Vector3{ thing.Position.x, thing.Position.y, floor + 0.5f }, 0.125f, ColorAlpha(YELLOW, 0.25f));
 		}
 
-		rlSetTexture(0);
-		rlBegin(RL_QUADS);
 		
 		for (const auto& sector : map.SectorCache)
 		{
@@ -278,6 +292,10 @@ namespace DoomRender
 					sp = ep;
 				}
 
+				float lenght = Vector2Length(Vector2Subtract(ep, sp));
+
+				auto& side = map.Sides->Contents[edge.Side];
+
 				if (edge.Destination < 65000)
 				{
 					// it's a partial wall
@@ -290,12 +308,39 @@ namespace DoomRender
 					if (floor < destFloor)
 					{
 						// we have a step up
+						Texture2D texture = GetTexture(side.LowerTexture, map.SourceWad);
+						rlSetTexture(texture.id);
 
-						rlColor4ub(sector.Tint.r, sector.Tint.g, sector.Tint.b, sector.Tint.a);
+						float height = (destFloor - floor);
+
+						float lenghtU = (lenght*32) / texture.width;
+
+						float heightV = (height * 32) / texture.height;
+
+						rlBegin(RL_QUADS);
+
+						float startU = side.Offset.x / 32.0f;
+						float endU = startU + lenghtU;
+						float startV = side.Offset.y / 32.0f;
+
+						float endV = startV + heightV;
+
+						rlColor4f(edge.LightFactor, edge.LightFactor, edge.LightFactor, 1);
+						
+						rlTexCoord2f(startU, startV);
 						rlVertex3f(sp.x, sp.y, floor);
+						
+						rlTexCoord2f(endU, startV);
 						rlVertex3f(ep.x, ep.y, floor);
+						
+						rlTexCoord2f(endU, endV);
 						rlVertex3f(ep.x, ep.y, destFloor);
+						
+						rlTexCoord2f(startU, endV);
 						rlVertex3f(sp.x, sp.y, destFloor);
+
+						rlEnd();
+						rlSetTexture(0);
 
 					}
 
@@ -303,24 +348,60 @@ namespace DoomRender
 					{
 						// we need to draw a roof stepdown
 
+						float startU = side.Offset.x / 32.0f;
+						float endU = startU + lenght;
+						float startV = side.Offset.y / 32.0f;
+						float endV = startV + (ceiling - destCeling);
 
-						rlColor4ub(sector.Tint.r, sector.Tint.g, sector.Tint.b, sector.Tint.a);
+						rlSetTexture(GetTexture(side.TopTexture, map.SourceWad).id);
+						rlBegin(RL_QUADS);
+
+						rlColor4f(edge.LightFactor, edge.LightFactor, edge.LightFactor, 1);
+						
+						rlTexCoord2f(startU, startV); 
 						rlVertex3f(sp.x, sp.y, destCeling);
+						
+						rlTexCoord2f(endU, startV);
 						rlVertex3f(ep.x, ep.y, destCeling);
+						
+						rlTexCoord2f(endU, endV);
 						rlVertex3f(ep.x, ep.y, ceiling);
+						
+						rlTexCoord2f(startU, endV);
 						rlVertex3f(sp.x, sp.y, ceiling);
+
+						rlEnd();
+						rlSetTexture(0);
 					}
 
 				}
 				else // it's a full wall
 				{
-					rlColor4ub(sector.Tint.r, sector.Tint.g, sector.Tint.b, sector.Tint.a);
+					float startU = side.Offset.x / 32.0f;
+					float endU = startU + lenght;
+					float startV = side.Offset.y / 32.0f;
+					float endV = startV + (ceiling - floor);
+
+					rlSetTexture(GetTexture(side.MidTexture, map.SourceWad).id);
+					rlBegin(RL_QUADS);
+
+					rlColor4f(edge.LightFactor, edge.LightFactor, edge.LightFactor, 1);
+
+					rlTexCoord2f(startU, startV); 
 					rlVertex3f(sp.x, sp.y, floor);
+					
+					rlTexCoord2f(endU, startV);
 					rlVertex3f(ep.x, ep.y, floor);
+
+					rlTexCoord2f(endU, endV);
 					rlVertex3f(ep.x, ep.y, ceiling);
+
+					rlTexCoord2f(startU, endV);
 					rlVertex3f(sp.x, sp.y, ceiling);
+
+					rlEnd();
+					rlSetTexture(0);
 				}
-	
 			}
 		}
 		rlEnd();

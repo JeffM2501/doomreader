@@ -30,6 +30,13 @@ namespace WADReader
 		return value;
 	}
 
+    uint8_t ReadUInt8(uint8_t* buffer, size_t& offset)
+    {
+        uint8_t value = *(uint8_t*)(buffer + offset);
+		offset += 1;
+		return value;
+    }
+
     std::string ReadName(uint8_t* buffer, size_t& offset)
     {
         char nameBuffer[9] = { 0 };

@@ -47,8 +47,11 @@ public:
 
 	virtual void Read(const char* fileName);
 
-
 	WADData::PlayPalLump* PalettesLump = nullptr;
+
+	WADData::PatchNamesLump* PatchNames = nullptr;
+
+	std::vector<WADData::TexturesLump*> TextureLumps;
 
 	class LevelMap
 	{
@@ -59,10 +62,6 @@ public:
 		std::string Name;
 		std::unordered_map<std::string, WADData::DirectoryEntry> Entries;
 		LumpDatabase LumpDB;
-		
-		WADData::PatchNamesLump* PatchNames = nullptr;
-
-		std::vector<WADData::TexturesLump*> Textures;
 
 		WADData::VertexesLump* Verts = nullptr;
 		WADData::LineDefLump* Lines = nullptr;
@@ -90,6 +89,11 @@ public:
 
 				// The sector on the other side of this line
 				size_t Destination = WADData::InvalidSideDefIndex;
+
+				Vector2 Direction = { 0 };
+				Vector2 Normal = { 0 };
+
+				float LightFactor = 0.25f;
 			};
 
 			// The sorted list of edges for this sector (forms a loop)
@@ -112,17 +116,27 @@ public:
 
 		size_t GetSectorFromPoint(float x, float y, size_t* subSector = nullptr) const;
 
+		WADData::TexturesLump::TextureDef* FindTexture(const std::string& name);
+
 	protected:
 		void FindLeafs(size_t node);
 
 		void CacheFlat(const std::string& flatName);
-		void CacheTexture(const std::string& flatName);
+		void CachePatch(const std::string& patchName);
+		void CacheTexture(const std::string& textureName);
+	};
+
+	struct PatchData
+	{
+		int XOffset = 0;
+		int YOffset = 0;
+		Image PixelData = { 0 };
 	};
 
 	std::vector<LevelMap> Levels;
 
 	std::unordered_map<std::string, Image> Flats;
-
+	std::unordered_map<std::string, PatchData> Patches;
 	std::unordered_map<std::string, Image> Textures;
 
 };

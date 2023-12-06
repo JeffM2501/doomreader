@@ -49,6 +49,7 @@ namespace WADData
     static constexpr char PLAYPAL[] = "PLAYPAL";
 
     static constexpr char PNAMES[] = "PNAMES";
+    static constexpr char TEXTURE[] = "TEXTURE";
     static constexpr char TEXTURE1[] = "TEXTURE1";
     static constexpr char TEXTURE2[] = "TEXTURE2";
 

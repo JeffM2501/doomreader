@@ -38,6 +38,8 @@ namespace WADData
 
 		if (name == PNAMES)
 			return new PatchNamesLump();
+		if (name == TEXTURE)
+			return new TexturesLump();
 		if (name == TEXTURE1)
 			return new TexturesLump();
 		if (name == TEXTURE2)
@@ -429,9 +431,11 @@ namespace WADData
 			texture.Width = WADReader::ReadUInt16(data, textureOffset);
 			texture.Height = WADReader::ReadUInt16(data, textureOffset);
 
-			uint16_t patchCount = WADReader::ReadUInt16(data, textureOffset);
+			texture.Ingored1 = WADReader::ReadUInt(data, textureOffset);
 
-			for (uint16_t patchIndex = 0; patchIndex < patchCount; patchIndex++)
+			texture.PatchCount = WADReader::ReadUInt16(data, textureOffset);
+
+			for (uint16_t patchIndex = 0; patchIndex < texture.PatchCount; patchIndex++)
 			{
 				PatchInfo patch;
 				patch.OriginX = WADReader::ReadInt16(data, textureOffset);
@@ -440,6 +444,7 @@ namespace WADData
 				patch.PatchId = WADReader::ReadUInt16(data, textureOffset);
 				patch.stepdir = WADReader::ReadUInt16(data, textureOffset);
 				patch.colormap = WADReader::ReadUInt16(data, textureOffset);
+
 				texture.Patches.push_back(patch);
 			}
 

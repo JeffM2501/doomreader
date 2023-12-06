@@ -1,6 +1,7 @@
 #include "doom_map.h"
 
 #include "reader.h"
+#include "raymath.h"
 
 bool IsMapLump(const std::string& name)
 {
@@ -79,11 +80,13 @@ void WADFile::Read(const char* fileName)
 		}
 		else
 		{
+			bool skip = false;
 			if (inMap)
 			{
 				if (IsMapLump(entry.Name))
 				{
 					map.Entries[entry.Name] = entry;
+					skip = true;
 				}
 				else
 				{
@@ -94,13 +97,21 @@ void WADFile::Read(const char* fileName)
 					inMap = false;
 				}
 			}
-			else
+
+			if (!skip)
 			{
+				LumpDB.LoadLumpData(entry);
+
 				if (entry.Name == WADData::PLAYPAL)
-				{
-					LumpDB.LoadLumpData(entry);
 					PalettesLump = LumpDB.GetLump<WADData::PlayPalLump>(WADData::PLAYPAL);
-				}
+				if (entry.Name == WADData::PNAMES)
+					PatchNames = LumpDB.GetLump<WADData::PatchNamesLump>(WADData::PNAMES);
+				if (entry.Name == WADData::TEXTURE)
+					TextureLumps.push_back(LumpDB.GetLump<WADData::TexturesLump>(WADData::TEXTURE));
+				if (entry.Name == WADData::TEXTURE1)
+					TextureLumps.push_back(LumpDB.GetLump<WADData::TexturesLump>(WADData::TEXTURE1));
+				if (entry.Name == WADData::TEXTURE2)
+					TextureLumps.push_back(LumpDB.GetLump<WADData::TexturesLump>(WADData::TEXTURE2));
 			}
 		}
 	}
@@ -180,6 +191,8 @@ void WADFile::LevelMap::CacheFlat(const std::string& flatName)
 
 	uint8_t* data = entryItr->second.BufferData + entryItr->second.LumpOffset;
 
+	auto& palette = SourceWad.PalettesLump->Contents[0];
+
 	Image flatImage = GenImageColor(64, 64, BLANK);
 	for (int y = 0; y < 64; y++)
 	{
@@ -187,7 +200,7 @@ void WADFile::LevelMap::CacheFlat(const std::string& flatName)
 		{
 			uint8_t index = *(data + (y * 64 + x));
 
-			Color imageColr = SourceWad.PalettesLump->Contents[0].Entry[index];
+			Color imageColr = palette.Entry[index];
 
 			ImageDrawPixel(&flatImage, x, 63-y, imageColr);
 		}
@@ -196,10 +209,116 @@ void WADFile::LevelMap::CacheFlat(const std::string& flatName)
 	SourceWad.Flats[flatName] = flatImage;
 }
 
+void WADFile::LevelMap::CachePatch(const std::string& patchName)
+{
+	if (SourceWad.Patches.find(patchName) != SourceWad.Patches.end())
+		return;
+
+	auto entryItr = SourceWad.Entries.find(patchName);
+
+	if (entryItr == SourceWad.Entries.end())
+		return;
+
+	uint8_t* data = entryItr->second.BufferData + entryItr->second.LumpOffset;
+	size_t offset = 0;
+
+	uint16_t width = WADReader::ReadUInt16(data, offset);
+	uint16_t height = WADReader::ReadUInt16(data, offset);
+
+	PatchData patch;
+	patch.XOffset = WADReader::ReadInt16(data, offset);
+	patch.YOffset = WADReader::ReadInt16(data, offset);
+	patch.PixelData = GenImageColor(width, height, BLANK);
+
+	auto& palette = SourceWad.PalettesLump->Contents[0];
+
+	std::vector<uint32_t> colOffsets;
+	for (uint16_t x = 0; x < width; x++)
+	{
+		colOffsets.push_back(WADReader::ReadUInt(data, offset));
+	}
+
+	for (uint16_t x = 0; x < width; x++)
+	{
+		size_t colOffset = colOffsets[x];
+
+		size_t postOffet = colOffset;
+
+		uint8_t yOffset = WADReader::ReadUInt8(data, postOffet);
+		if (yOffset != 255)
+		{
+			uint8_t lenght = WADReader::ReadUInt8(data, postOffet);
+			uint8_t pad = WADReader::ReadUInt8(data, postOffet);
+
+			for (uint8_t y = 0; y <= lenght; y++)
+			{
+				uint8_t pixelIndex = WADReader::ReadUInt8(data, postOffet);
+
+				Color imageColr = palette.Entry[pixelIndex];
+
+				ImageDrawPixel(&patch.PixelData, x, y+yOffset, imageColr);
+			}
+
+			pad = WADReader::ReadUInt8(data, postOffet);
+		}
+	}
+
+	SourceWad.Patches[patchName] = patch;
+}
+
+
+WADData::TexturesLump::TextureDef* WADFile::LevelMap::FindTexture(const std::string& name)
+{
+	for (auto textureGroupItr = SourceWad.TextureLumps.rbegin(); textureGroupItr != SourceWad.TextureLumps.rend(); textureGroupItr++)
+	{
+		auto textureItr = (*textureGroupItr)->Contents.find(name);
+		if (textureItr != (*textureGroupItr)->Contents.end())
+		{
+			return &textureItr->second;
+		}
+	}
+
+	return nullptr;
+}
+
 void WADFile::LevelMap::CacheTexture(const std::string& textureName)
 {
-	if (SourceWad.Textures.find(textureName) != SourceWad.Flats.end())
+	if (SourceWad.Textures.find(textureName) != SourceWad.Textures.end())
 		return;
+	
+	auto* textureDef = FindTexture(textureName);
+	if (!textureDef)
+		return;
+
+	Image textureImage = GenImageColor(textureDef->Width, textureDef->Height, BLANK);
+
+	for (const auto& patch : textureDef->Patches)
+	{
+		const std::string& patchName = SourceWad.PatchNames->Contents[patch.PatchId];
+
+		CachePatch(patchName);
+
+		auto patchItr = SourceWad.Patches.find(patchName);
+		if (patchItr == SourceWad.Patches.end())
+			continue;
+		Rectangle source = { 0, 0, float(patchItr->second.PixelData.width),  float(patchItr->second.PixelData.height) };
+		Rectangle destination = { float(patch.OriginX), float(patch.OriginY), source.width, source.height };
+		ImageDraw(&textureImage, patchItr->second.PixelData, source, destination, WHITE);
+	}
+
+	SourceWad.Textures[textureName] = textureImage;
+}
+
+float GetLightFactor(const Vector2& normal)
+{
+	static Vector2 LightDir = Vector2Normalize(Vector2{ 1,1 });
+
+	float dot = Vector2DotProduct(normal, LightDir);
+
+	if (dot < 0)
+		return 0.35f;
+
+	return 0.35f + (dot * 0.75f);
 }
 
 void WADFile::LevelMap::Load()
@@ -222,10 +341,6 @@ void WADFile::LevelMap::Load()
 	GLVerts = LumpDB.GetLump<WADData::GLVertsLump>(WADData::GL_VERT);
 	GLSegs = LumpDB.GetLump<WADData::GLSegsLump>(WADData::GL_SEGS);
 	GLSubSectors = LumpDB.GetLump<WADData::GLSubSectorsLump>(WADData::GL_SSECT);
-
-	PatchNames = LumpDB.GetLump<WADData::PatchNamesLump>(WADData::PNAMES);
-	Textures.push_back(LumpDB.GetLump<WADData::TexturesLump>(WADData::TEXTURE1));
-	Textures.push_back(LumpDB.GetLump<WADData::TexturesLump>(WADData::TEXTURE2));
 
 	SectorCache.resize(Sectors->Contents.size());
 
@@ -251,6 +366,9 @@ void WADFile::LevelMap::Load()
 	{
 		auto& line = Lines->Contents[lineIndex];
 
+		auto sp = Verts->Contents[line.Start].Position;
+		auto ep = Verts->Contents[line.End].Position;
+
 		if (line.FrontSideDef != WADData::InvalidSideDefIndex)
 		{
 			auto& side = Sides->Contents[line.FrontSideDef];
@@ -259,6 +377,10 @@ void WADFile::LevelMap::Load()
 			SectorInfo::Edge edge;
 			edge.Line = lineIndex;
 			edge.Reverse = false;
+
+			edge.Direction = Vector2Normalize(Vector2Subtract(ep, sp));
+			edge.Normal = Vector2{ -edge.Direction.y, edge.Direction.x };
+			edge.LightFactor = GetLightFactor(edge.Normal);
 
 			edge.Side = line.FrontSideDef;
 			if (line.BackSideDef != WADData::InvalidSideDefIndex)
@@ -275,6 +397,10 @@ void WADFile::LevelMap::Load()
 			SectorInfo::Edge edge;
 			edge.Line = lineIndex;
 			edge.Reverse = true;
+
+			edge.Direction = Vector2Normalize(Vector2Subtract(sp, ep));
+			edge.Normal = Vector2{ -edge.Direction.y, edge.Direction.x };
+			edge.LightFactor = GetLightFactor(edge.Normal);
 
 			edge.Side = line.BackSideDef;
 
