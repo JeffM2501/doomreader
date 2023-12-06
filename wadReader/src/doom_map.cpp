@@ -380,7 +380,10 @@ void WADFile::LevelMap::Load()
 
 			edge.Direction = Vector2Normalize(Vector2Subtract(ep, sp));
 			edge.Normal = Vector2{ -edge.Direction.y, edge.Direction.x };
-			edge.LightFactor = GetLightFactor(edge.Normal);
+
+			float lightLevel = Sectors->Contents[side.SectorId].LightLevel / 255.0f;
+
+			edge.LightFactor = GetLightFactor(edge.Normal) * lightLevel;
 
 			edge.Side = line.FrontSideDef;
 			if (line.BackSideDef != WADData::InvalidSideDefIndex)

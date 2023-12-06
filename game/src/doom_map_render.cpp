@@ -309,21 +309,17 @@ namespace DoomRender
 					{
 						// we have a step up
 						Texture2D texture = GetTexture(side.LowerTexture, map.SourceWad);
+						float startU = side.Offset.x / float(texture.width);
+						Vector2 textureInWU = { texture.width / 32.0f, texture.height / 32.0f };
+
+						float endU = startU + lenght / textureInWU.x;
+
+						float startV = side.Offset.y / float(texture.height);
+						float endV = startV + (destFloor - floor) / textureInWU.y;
+
 						rlSetTexture(texture.id);
 
-						float height = (destFloor - floor);
-
-						float lenghtU = (lenght*32) / texture.width;
-
-						float heightV = (height * 32) / texture.height;
-
 						rlBegin(RL_QUADS);
-
-						float startU = side.Offset.x / 32.0f;
-						float endU = startU + lenghtU;
-						float startV = side.Offset.y / 32.0f;
-
-						float endV = startV + heightV;
 
 						rlColor4f(edge.LightFactor, edge.LightFactor, edge.LightFactor, 1);
 						
@@ -347,13 +343,17 @@ namespace DoomRender
 					if (destCeling < ceiling)
 					{
 						// we need to draw a roof stepdown
+						auto texture = GetTexture(side.TopTexture, map.SourceWad);
 
-						float startU = side.Offset.x / 32.0f;
-						float endU = startU + lenght;
-						float startV = side.Offset.y / 32.0f;
-						float endV = startV + (ceiling - destCeling);
+						float startU = side.Offset.x / float(texture.width);
+						Vector2 textureInWU = { texture.width / 32.0f, texture.height / 32.0f };
 
-						rlSetTexture(GetTexture(side.TopTexture, map.SourceWad).id);
+						float endU = startU + lenght / textureInWU.x;
+
+						float startV = side.Offset.y / float(texture.height);
+						float endV = startV + (ceiling - destCeling) / textureInWU.y;
+
+						rlSetTexture(texture.id);
 						rlBegin(RL_QUADS);
 
 						rlColor4f(edge.LightFactor, edge.LightFactor, edge.LightFactor, 1);
@@ -377,12 +377,17 @@ namespace DoomRender
 				}
 				else // it's a full wall
 				{
-					float startU = side.Offset.x / 32.0f;
-					float endU = startU + lenght;
-					float startV = side.Offset.y / 32.0f;
-					float endV = startV + (ceiling - floor);
+					auto texture = GetTexture(side.MidTexture, map.SourceWad);
 
-					rlSetTexture(GetTexture(side.MidTexture, map.SourceWad).id);
+					float startU = side.Offset.x / float(texture.width);
+					Vector2 textureInWU = { texture.width / 32.0f, texture.height / 32.0f };
+
+					float endU = startU + lenght/textureInWU.x;
+					
+					float startV = side.Offset.y / float(texture.height);
+					float endV = startV + (ceiling - floor)/textureInWU.y;
+
+					rlSetTexture(texture.id);
 					rlBegin(RL_QUADS);
 
 					rlColor4f(edge.LightFactor, edge.LightFactor, edge.LightFactor, 1);

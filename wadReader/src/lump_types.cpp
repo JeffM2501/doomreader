@@ -123,8 +123,8 @@ namespace WADData
             Contents[i].YOffset = WADReader::ReadInt16(data, readOffset);
 
             Contents[i].TopTexture = WADReader::ReadName(data, readOffset);
+			Contents[i].LowerTexture = WADReader::ReadName(data, readOffset);
             Contents[i].MidTexture = WADReader::ReadName(data, readOffset);
-            Contents[i].LowerTexture = WADReader::ReadName(data, readOffset);
 
             Contents[i].SectorId = WADReader::ReadInt16(data, readOffset);
 
