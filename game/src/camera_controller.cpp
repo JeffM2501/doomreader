@@ -24,7 +24,7 @@ CameraController::CameraController()
 
 void CameraController::Update(const WADFile::LevelMap& map)
 {
-	float runspeed = 18.0f * GetFrameTime();
+	float runspeed = 9 * GetFrameTime();
 
 	//rotate the player base left and right
 	if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))

@@ -271,7 +271,6 @@ namespace DoomRender
 				floor = map.Sectors->Contents[thing.SectorId].Floor;
 			DrawSphere(Vector3{ thing.Position.x, thing.Position.y, floor + 0.5f }, 0.125f, ColorAlpha(YELLOW, 0.25f));
 		}
-
 		
 		for (const auto& sector : map.SectorCache)
 		{
@@ -323,16 +322,16 @@ namespace DoomRender
 
 						rlColor4f(edge.LightFactor, edge.LightFactor, edge.LightFactor, 1);
 						
-						rlTexCoord2f(startU, startV);
+						rlTexCoord2f(startU, endV);
 						rlVertex3f(sp.x, sp.y, floor);
 						
-						rlTexCoord2f(endU, startV);
+						rlTexCoord2f(endU, endV);
 						rlVertex3f(ep.x, ep.y, floor);
 						
-						rlTexCoord2f(endU, endV);
+						rlTexCoord2f(endU, startV);
 						rlVertex3f(ep.x, ep.y, destFloor);
 						
-						rlTexCoord2f(startU, endV);
+						rlTexCoord2f(startU, startV);
 						rlVertex3f(sp.x, sp.y, destFloor);
 
 						rlEnd();
@@ -358,16 +357,16 @@ namespace DoomRender
 
 						rlColor4f(edge.LightFactor, edge.LightFactor, edge.LightFactor, 1);
 						
-						rlTexCoord2f(startU, startV); 
+						rlTexCoord2f(startU, endV);
 						rlVertex3f(sp.x, sp.y, destCeling);
 						
-						rlTexCoord2f(endU, startV);
+						rlTexCoord2f(endU, endV);
 						rlVertex3f(ep.x, ep.y, destCeling);
 						
-						rlTexCoord2f(endU, endV);
+						rlTexCoord2f(endU, startV);
 						rlVertex3f(ep.x, ep.y, ceiling);
 						
-						rlTexCoord2f(startU, endV);
+						rlTexCoord2f(startU, startV);
 						rlVertex3f(sp.x, sp.y, ceiling);
 
 						rlEnd();
@@ -392,16 +391,16 @@ namespace DoomRender
 
 					rlColor4f(edge.LightFactor, edge.LightFactor, edge.LightFactor, 1);
 
-					rlTexCoord2f(startU, startV); 
+					rlTexCoord2f(startU, endV);
 					rlVertex3f(sp.x, sp.y, floor);
 					
-					rlTexCoord2f(endU, startV);
+					rlTexCoord2f(endU, endV);
 					rlVertex3f(ep.x, ep.y, floor);
 
-					rlTexCoord2f(endU, endV);
+					rlTexCoord2f(endU, startV);
 					rlVertex3f(ep.x, ep.y, ceiling);
 
-					rlTexCoord2f(startU, endV);
+					rlTexCoord2f(startU, startV);
 					rlVertex3f(sp.x, sp.y, ceiling);
 
 					rlEnd();

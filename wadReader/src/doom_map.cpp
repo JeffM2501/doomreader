@@ -266,7 +266,6 @@ void WADFile::LevelMap::CachePatch(const std::string& patchName)
 	SourceWad.Patches[patchName] = patch;
 }
 
-
 WADData::TexturesLump::TextureDef* WADFile::LevelMap::FindTexture(const std::string& name)
 {
 	for (auto textureGroupItr = SourceWad.TextureLumps.rbegin(); textureGroupItr != SourceWad.TextureLumps.rend(); textureGroupItr++)
@@ -315,7 +314,7 @@ float GetLightFactor(const Vector2& normal)
 
 	float dot = Vector2DotProduct(normal, LightDir);
 
-	if (dot < 0)
+	if (dot <= 0)
 		return 0.35f;
 
 	return 0.35f + (dot * 0.75f);
@@ -381,9 +380,7 @@ void WADFile::LevelMap::Load()
 			edge.Direction = Vector2Normalize(Vector2Subtract(ep, sp));
 			edge.Normal = Vector2{ -edge.Direction.y, edge.Direction.x };
 
-			float lightLevel = Sectors->Contents[side.SectorId].LightLevel / 255.0f;
-
-			edge.LightFactor = GetLightFactor(edge.Normal) * lightLevel;
+			edge.LightFactor = Sectors->Contents[side.SectorId].LightLevel / 255.0f;
 
 			edge.Side = line.FrontSideDef;
 			if (line.BackSideDef != WADData::InvalidSideDefIndex)
@@ -403,7 +400,8 @@ void WADFile::LevelMap::Load()
 
 			edge.Direction = Vector2Normalize(Vector2Subtract(sp, ep));
 			edge.Normal = Vector2{ -edge.Direction.y, edge.Direction.x };
-			edge.LightFactor = GetLightFactor(edge.Normal);
+
+			edge.LightFactor = Sectors->Contents[side.SectorId].LightLevel / 255.0f;
 
 			edge.Side = line.BackSideDef;
 
